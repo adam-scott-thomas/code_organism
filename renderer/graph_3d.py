@@ -40,6 +40,15 @@ class OrganismRenderer:
         Returns:
             URL of the visualization
         """
+        # Pre-compute layout server-side (avoids O(n^2) JS freeze)
+        from ..model.layout import LayoutEngine
+        engine = LayoutEngine()
+        self._precomputed_positions = engine.compute_layout(
+            self.organism.nodes, self.organism.edges,
+            use_cache=True, iterations=80,
+        )
+        print(f"Layout computed: {len(self._precomputed_positions)} positions")
+
         # Generate the HTML
         html_content = self._generate_html()
 
@@ -87,7 +96,33 @@ class OrganismRenderer:
 
     def _generate_html(self) -> str:
         """Generate the HTML/JS visualization."""
-        organism_data = json.dumps(self.organism.get_layout_data())
+        layout_data = self.organism.get_layout_data()
+
+        # Filter to structural nodes only (skip cellular noise)
+        structural_types = {"module", "class", "function", "method"}
+        structural_ids = {
+            n["id"] for n in layout_data["nodes"] if n["type"] in structural_types
+        }
+        layout_data["nodes"] = [
+            n for n in layout_data["nodes"] if n["id"] in structural_ids
+        ]
+        layout_data["edges"] = [
+            e for e in layout_data["edges"]
+            if e["source"] in structural_ids and e["target"] in structural_ids
+        ]
+        layout_data["particles"] = []
+
+        # Inject pre-computed positions (scaled for spacing)
+        positions = getattr(self, '_precomputed_positions', {})
+        if positions:
+            spread = 4.0
+            for node in layout_data["nodes"]:
+                pos = positions.get(node["id"])
+                if pos:
+                    node["x"] = pos["x"] * spread
+                    node["y"] = pos["y"] * spread
+                    node["z"] = pos["z"] * spread
+        organism_data = json.dumps(layout_data)
 
         return f'''<!DOCTYPE html>
 <html lang="en">
@@ -504,9 +539,17 @@ class OrganismRenderer:
                 return;
             }}
 
-            // Position nodes using force-directed layout (simplified)
-            const positions = layoutNodes(nodes, edges);
-            console.log('Layout computed for', Object.keys(positions).length, 'nodes');
+            // Use pre-computed positions if available, else fall back to JS layout
+            let positions;
+            const hasPrecomputed = nodes.length > 0 && nodes[0].x !== undefined;
+            if (hasPrecomputed) {{
+                positions = {{}};
+                nodes.forEach(n => {{ positions[n.id] = {{ x: n.x, y: n.y, z: n.z }}; }});
+                console.log('Using pre-computed layout for', nodes.length, 'nodes');
+            }} else {{
+                positions = layoutNodes(nodes, edges);
+                console.log('Computed JS layout for', Object.keys(positions).length, 'nodes');
+            }}
 
             // Create node meshes - LARGER SIZES for visibility
             nodes.forEach((node, index) => {{
@@ -514,7 +557,7 @@ class OrganismRenderer:
 
                 // Geometry based on type - LARGE SIZES for visibility
                 let geometry;
-                const size = (node.size || 1) * 6;  // 6x base size for visibility
+                const size = (node.size || 1) * 2.5;  // scaled for clarity
 
                 switch (node.type) {{
                     case 'module':
@@ -588,7 +631,7 @@ class OrganismRenderer:
                     }}
 
                     // Use cylinder geometry for thick lines - scaled up for visibility
-                    const cylinderGeometry = new THREE.CylinderGeometry(0.5, 0.5, length, 6);
+                    const cylinderGeometry = new THREE.CylinderGeometry(0.15, 0.15, length, 4);
                     const cylinderMaterial = new THREE.MeshBasicMaterial({{
                         color: edgeColor,
                         transparent: true,

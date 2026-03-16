@@ -842,6 +842,58 @@ class Organism:
         with open(filepath) as f:
             data = json.load(f)
 
-        organism = cls(name=data["name"])
-        # TODO: Implement full deserialization
+        organism = cls(name=data.get("name", "loaded"))
+
+        # Deserialize nodes
+        for nid, nd in data.get("nodes", {}).items():
+            pos = None
+            if nd.get("position"):
+                pos = Position(
+                    file=nd["position"]["file"],
+                    line=nd["position"]["line"],
+                    column=nd["position"]["column"],
+                )
+            metrics_data = nd.get("metrics", {})
+            node = OrganismNode(
+                id=nd["id"],
+                name=nd["name"],
+                node_type=NodeType(nd["type"]),
+                qualified_name=nd.get("qualified_name", nd["name"]),
+                position=pos,
+                parent_id=nd.get("parent_id"),
+                children_ids=nd.get("children_ids", []),
+                imports=nd.get("imports", []),
+                calls=nd.get("calls", []),
+                docstring=nd.get("docstring"),
+                signature=nd.get("signature"),
+                metrics=Metrics(
+                    cyclomatic_complexity=metrics_data.get("cyclomatic_complexity", 0),
+                    lines_of_code=metrics_data.get("lines_of_code", 0),
+                    depth=metrics_data.get("depth", 0),
+                ),
+                health=HealthStatus(nd["health"]) if nd.get("health") else HealthStatus.UNKNOWN,
+                health_notes=nd.get("health_notes", []),
+            )
+            if nd.get("color"):
+                node.color = tuple(nd["color"])
+            if nd.get("size"):
+                node.size = nd["size"]
+            organism.add_node(node)
+
+        # Deserialize edges
+        for eid, ed in data.get("edges", {}).items():
+            edge = Edge(
+                id=ed["id"],
+                source_id=ed["source_id"],
+                target_id=ed["target_id"],
+                edge_type=ed["edge_type"],
+                weight=ed.get("weight", 1.0),
+            )
+            if ed.get("color"):
+                edge.color = tuple(ed["color"])
+            organism.add_edge(edge)
+
+        # Rebuild root_ids
+        organism.root_ids = data.get("root_ids", [])
+
         return organism
