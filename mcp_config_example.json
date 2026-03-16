@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "code-organism": {
+      "command": "python",
+      "args": ["-m", "Code_Organism.mcp_server"],
+      "cwd": "D:/lost_marbles/Code_Organism"
+    }
+  }
+}
