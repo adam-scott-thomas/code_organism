@@ -56,6 +56,66 @@ class TestJavaScript:
         call_edges = [e for e in edges if e.edge_type == "call"]
         assert len(call_edges) >= 1, "Expected at least one call edge"
 
+    def test_same_file_function_call_resolved(self, parser, tmp_dir):
+        """foo() calling bar() in the same file resolves to bar's node."""
+        p = tmp_dir / "calls.js"
+        p.write_text('''\
+function bar() { return 1; }
+
+function foo() { return bar(); }
+''')
+        nodes, edges = parser.parse_file(str(p))
+        bar_node = next(n for n in nodes if n.name == "bar")
+        foo_node = next(n for n in nodes if n.name == "foo")
+
+        # There should be a call edge from foo -> bar
+        call_edges = [
+            e for e in edges
+            if e.edge_type == "call"
+            and e.source_id == foo_node.id
+            and e.target_id == bar_node.id
+        ]
+        assert len(call_edges) == 1, (
+            f"Expected foo->bar call edge, got edges: "
+            f"{[(e.source_id[:8], e.target_id[:8]) for e in edges if e.edge_type == 'call']}"
+        )
+        # bar should NOT appear as a BUILTIN node
+        builtin_names = {n.name for n in nodes if n.node_type == NodeType.BUILTIN}
+        assert "bar" not in builtin_names
+
+    def test_same_file_method_call_resolved(self, parser, tmp_dir):
+        """obj.process() resolves to the class method in the same file."""
+        p = tmp_dir / "methods.js"
+        p.write_text('''\
+class Worker {
+    process() { return 42; }
+}
+
+function run() {
+    const w = new Worker();
+    return w.process();
+}
+''')
+        nodes, edges = parser.parse_file(str(p))
+        process_node = next(
+            n for n in nodes if n.name == "process" and n.node_type == NodeType.METHOD
+        )
+        run_node = next(n for n in nodes if n.name == "run")
+
+        # There should be a call edge from run -> process (the method)
+        call_to_process = [
+            e for e in edges
+            if e.edge_type == "call"
+            and e.source_id == run_node.id
+            and e.target_id == process_node.id
+        ]
+        assert len(call_to_process) == 1, (
+            "Expected run->Worker.process call edge"
+        )
+        # process should NOT be BUILTIN
+        builtin_names = {n.name for n in nodes if n.node_type == NodeType.BUILTIN}
+        assert "process" not in builtin_names
+
     def test_module_node_created(self, parser, sample_js_file):
         nodes, _ = parser.parse_file(str(sample_js_file))
         module_nodes = [n for n in nodes if n.node_type == NodeType.MODULE]

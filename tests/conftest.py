@@ -223,3 +223,69 @@ def main():
     return total
 ''')
     return tmp_dir
+
+
+@pytest.fixture
+def cross_file_js_project(tmp_dir):
+    """A multi-file JavaScript project where file A calls functions from file B.
+
+    utils.js defines ``formatName`` and ``calculateTotal``.
+    app.js calls both of those functions.
+    After single-file parsing, app.js's calls will point to BUILTIN nodes.
+    After cross-file resolution, they should retarget to the real definitions.
+    """
+    (tmp_dir / "utils.js").write_text('''\
+function formatName(first, last) {
+    return first + " " + last;
+}
+
+function calculateTotal(items) {
+    let sum = 0;
+    for (const item of items) {
+        sum += item.price;
+    }
+    return sum;
+}
+
+export { formatName, calculateTotal };
+''')
+    (tmp_dir / "app.js").write_text('''\
+import { formatName, calculateTotal } from './utils';
+
+function main() {
+    const name = formatName("Alice", "Smith");
+    const total = calculateTotal([{ price: 10 }, { price: 20 }]);
+    console.log(name, total);
+}
+
+export { main };
+''')
+    return tmp_dir
+
+
+@pytest.fixture
+def cross_file_python_project(tmp_dir):
+    """A multi-file Python project where one file calls functions from another.
+
+    helpers.py defines ``compute`` and ``transform``.
+    runner.py calls both of those functions.
+    """
+    (tmp_dir / "helpers.py").write_text('''\
+"""Helper functions."""
+
+def compute(x, y):
+    return x * y + 1
+
+def transform(data):
+    return [d * 2 for d in data]
+''')
+    (tmp_dir / "runner.py").write_text('''\
+"""Runner module."""
+from helpers import compute, transform
+
+def run():
+    result = compute(3, 4)
+    items = transform([1, 2, 3])
+    return result, items
+''')
+    return tmp_dir

@@ -216,21 +216,30 @@ class Organism:
 
     @classmethod
     def from_directory(cls, dirpath: str | Path, pattern: str = "**/*.py") -> "Organism":
-        """Create an organism from a directory of Python files."""
-        from ..parser.ast_walker import parse_file
+        """Create an organism from a directory of source files.
+
+        Uses the parser dispatcher so that both Python and tree-sitter
+        supported languages are handled.  After all files are parsed,
+        a cross-file resolution pass retargets BUILTIN placeholder
+        call edges to real function/method/class definitions found in
+        other files within the same project.
+        """
+        from ..parser.dispatcher import parse_file, resolve_cross_file_calls
 
         dirpath = Path(dirpath)
         organism = cls(name=dirpath.name)
 
-        # Find all Python files
+        # Accumulate all nodes and edges across files for cross-file
+        # resolution before adding them to the organism.
+        all_nodes: list[OrganismNode] = []
+        all_edges: list[Edge] = []
+
         for filepath in dirpath.glob(pattern):
             if filepath.is_file():
                 try:
-                    nodes, edges = parse_file(filepath)
-                    for node in nodes:
-                        organism.add_node(node)
-                    for edge in edges:
-                        organism.add_edge(edge)
+                    nodes, edges = parse_file(str(filepath))
+                    all_nodes.extend(nodes)
+                    all_edges.extend(edges)
 
                     # Package __init__.py files are roots
                     if filepath.name == "__init__.py":
@@ -240,6 +249,15 @@ class Organism:
 
                 except Exception as e:
                     print(f"Warning: Failed to parse {filepath}: {e}")
+
+        # Second pass: resolve cross-file calls
+        resolve_cross_file_calls(all_nodes, all_edges)
+
+        # Add resolved nodes and edges to the organism
+        for node in all_nodes:
+            organism.add_node(node)
+        for edge in all_edges:
+            organism.add_edge(edge)
 
         # If no __init__.py found, use all modules as roots
         if not organism.root_ids:

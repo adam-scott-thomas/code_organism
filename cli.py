@@ -13,6 +13,11 @@ Usage (subcommands):
     code-organism index <path> [--db PATH] [--output json]
     code-organism impact <path> --target NAME [--output json]
     code-organism communities <path> [--output json]
+    code-organism query <db_path> --cypher "..." [--output json]
+    code-organism query <db_path> --unhealthy [--output json]
+    code-organism query <db_path> --hotspots [--output json]
+    code-organism query <db_path> --stats [--output json]
+    code-organism impact-graph <db_path> --target NAME [--direction upstream|downstream] [--depth N] [--output json]
 """
 
 import argparse
@@ -23,7 +28,7 @@ from pathlib import Path
 from .model import Organism
 
 # Subcommands recognized by the new CLI
-SUBCOMMANDS = {"analyze", "health", "index", "impact", "communities"}
+SUBCOMMANDS = {"analyze", "health", "index", "impact", "communities", "query", "impact-graph"}
 
 
 def _output_json(data, file=None):
@@ -327,6 +332,237 @@ def cmd_communities(args):
                 print(f"    - {kw}")
 
 
+def cmd_query(args):
+    """Handle the 'query' subcommand — query a persisted KuzuDB graph."""
+    from .graph.store import GraphStore
+
+    db_path = Path(args.db)
+    if not db_path.exists():
+        _info(f"Error: database '{db_path}' not found. Run 'code-organism index' first.")
+        sys.exit(1)
+
+    json_mode = getattr(args, "output", None) == "json"
+
+    with GraphStore(db_path) as store:
+        if args.cypher:
+            results = store.query(args.cypher)
+            if json_mode:
+                _output_json({"results": results, "count": len(results)})
+            else:
+                if not results:
+                    _info("No results.")
+                else:
+                    columns = list(results[0].keys())
+                    # Print header
+                    header = " | ".join(f"{c:>20}" for c in columns)
+                    print(header)
+                    print("-" * len(header))
+                    for row in results:
+                        print(" | ".join(f"{str(row[c]):>20}" for c in columns))
+
+        elif args.unhealthy:
+            results = store.query(
+                "MATCH (f:Function) WHERE f.health_score < 0.5 "
+                "RETURN f.name AS name, f.filePath AS file, "
+                "f.health_status AS status, f.health_score AS score "
+                "ORDER BY f.health_score"
+            )
+            # Also check methods
+            method_results = store.query(
+                "MATCH (m:Method) WHERE m.health_score < 0.5 "
+                "RETURN m.name AS name, m.filePath AS file, "
+                "m.health_status AS status, m.health_score AS score "
+                "ORDER BY m.health_score"
+            )
+            results = results + method_results
+            results.sort(key=lambda r: r.get("score", 0))
+
+            if json_mode:
+                _output_json({"unhealthy": results, "count": len(results)})
+            else:
+                if not results:
+                    print("No unhealthy nodes found.")
+                else:
+                    print(f"\nUnhealthy nodes ({len(results)}):\n")
+                    for r in results:
+                        print(f"  [{r['status']:>10}] {r['name']:<30} score={r['score']:.3f}  {r['file']}")
+
+        elif args.hotspots:
+            results = store.query(
+                "MATCH (f:Function) WHERE f.cyclomatic_complexity > 0 "
+                "RETURN f.name AS name, f.filePath AS file, "
+                "f.cyclomatic_complexity AS complexity, f.health_score AS score "
+                "ORDER BY f.cyclomatic_complexity DESC LIMIT 10"
+            )
+            if json_mode:
+                _output_json({"hotspots": results, "count": len(results)})
+            else:
+                if not results:
+                    print("No complexity hotspots found.")
+                else:
+                    print("\nTop complexity hotspots:\n")
+                    for r in results:
+                        print(f"  CC={r['complexity']:>3}  score={r['score']:.3f}  {r['name']:<30}  {r['file']}")
+
+        elif args.stats:
+            # Gather summary stats from the graph
+            total = store.count_nodes()
+            table_counts = {}
+            for table in ["Module", "Package", "Class", "Function", "Method", "Variable", "External", "Community", "Process"]:
+                try:
+                    rows = store.query(f"MATCH (n:{table}) RETURN count(n) AS cnt")
+                    table_counts[table] = rows[0]["cnt"] if rows else 0
+                except Exception:
+                    table_counts[table] = 0
+
+            edge_rows = store.query("MATCH ()-[r:CodeRelation]->() RETURN count(r) AS cnt")
+            edge_count = edge_rows[0]["cnt"] if edge_rows else 0
+
+            # Health distribution for Function + Method nodes
+            health_dist = {}
+            for table in ["Function", "Method"]:
+                try:
+                    rows = store.query(
+                        f"MATCH (n:{table}) RETURN n.health_status AS status, count(n) AS cnt"
+                    )
+                    for r in rows:
+                        status = r["status"]
+                        health_dist[status] = health_dist.get(status, 0) + r["cnt"]
+                except Exception:
+                    pass
+
+            stats_data = {
+                "total_nodes": total,
+                "total_edges": edge_count,
+                "node_counts": table_counts,
+                "health_distribution": health_dist,
+            }
+
+            if json_mode:
+                _output_json(stats_data)
+            else:
+                print(f"\nGraph Statistics:")
+                print(f"  Total nodes: {total}")
+                print(f"  Total edges: {edge_count}")
+                print(f"\n  Node counts by type:")
+                for table, count in table_counts.items():
+                    if count > 0:
+                        print(f"    {table:>12}: {count}")
+                if health_dist:
+                    print(f"\n  Health distribution (Functions + Methods):")
+                    for status, count in sorted(health_dist.items()):
+                        print(f"    {status:>12}: {count}")
+
+        else:
+            _info("Error: specify --cypher, --unhealthy, --hotspots, or --stats")
+            sys.exit(1)
+
+
+def cmd_impact_graph(args):
+    """Handle the 'impact-graph' subcommand — blast radius from persisted KuzuDB."""
+    from .graph.store import GraphStore
+
+    db_path = Path(args.db)
+    if not db_path.exists():
+        _info(f"Error: database '{db_path}' not found. Run 'code-organism index' first.")
+        sys.exit(1)
+
+    json_mode = getattr(args, "output", None) == "json"
+    direction = getattr(args, "direction", "upstream")
+    max_depth = getattr(args, "depth", 3)
+    target_name = args.target
+
+    with GraphStore(db_path) as store:
+        # Find the target node by name across all structural tables
+        target_uid = None
+        for table in ["Function", "Method", "Class", "Module", "Package", "Variable"]:
+            try:
+                rows = store.query(
+                    f"MATCH (n:{table} {{name: $name}}) RETURN n.uid AS uid",
+                    {"name": target_name},
+                )
+                if rows:
+                    target_uid = rows[0]["uid"]
+                    break
+            except Exception:
+                continue
+
+        if target_uid is None:
+            _info(f"Error: symbol '{target_name}' not found in the graph.")
+            if json_mode:
+                _output_json({
+                    "error": f"symbol '{target_name}' not found",
+                    "target": target_name,
+                    **{f"depth_{d}": [] for d in range(1, max_depth + 1)},
+                })
+            sys.exit(1)
+
+        # BFS traversal via repeated Cypher queries (KuzuDB variable-length
+        # path support varies, so we do explicit per-depth queries)
+        result: dict[str, list[dict]] = {}
+        visited: set[str] = {target_uid}
+        current_frontier: set[str] = {target_uid}
+
+        for depth in range(1, max_depth + 1):
+            next_frontier: set[str] = set()
+            depth_entries: list[dict] = []
+
+            for uid in current_frontier:
+                if direction == "upstream":
+                    # Who points TO this node?
+                    rows = store.query(
+                        "MATCH (src)-[r:CodeRelation]->(tgt {uid: $uid}) "
+                        "RETURN src.uid AS uid, src.name AS name, src.filePath AS file, r.kind AS edge_type",
+                        {"uid": uid},
+                    )
+                else:
+                    # What does this node point TO?
+                    rows = store.query(
+                        "MATCH (src {uid: $uid})-[r:CodeRelation]->(tgt) "
+                        "RETURN tgt.uid AS uid, tgt.name AS name, tgt.filePath AS file, r.kind AS edge_type",
+                        {"uid": uid},
+                    )
+
+                for row in rows:
+                    neighbor_uid = row["uid"]
+                    if neighbor_uid in visited:
+                        continue
+                    visited.add(neighbor_uid)
+                    next_frontier.add(neighbor_uid)
+                    depth_entries.append({
+                        "node_id": neighbor_uid,
+                        "name": row["name"],
+                        "file": row.get("file", ""),
+                        "edge_type": row["edge_type"],
+                    })
+
+            result[f"depth_{depth}"] = depth_entries
+            current_frontier = next_frontier
+
+            if not current_frontier:
+                for remaining in range(depth + 1, max_depth + 1):
+                    result[f"depth_{remaining}"] = []
+                break
+
+    if json_mode:
+        _output_json(result)
+    else:
+        total = sum(len(v) for v in result.values())
+        print(f"\nImpact analysis for '{target_name}' ({direction}, depth={max_depth}): {total} affected symbols\n")
+        for depth_key in sorted(result.keys()):
+            items = result[depth_key]
+            label = {
+                "depth_1": "WILL BREAK",
+                "depth_2": "LIKELY AFFECTED",
+                "depth_3": "MAY NEED TESTING",
+            }.get(depth_key, depth_key)
+            print(f"{depth_key} ({label}): {len(items)} symbols")
+            for item in items[:10]:
+                print(f"  - {item['name']} ({item['edge_type']}) {item.get('file', '')}")
+            if len(items) > 10:
+                print(f"  ... and {len(items) - 10} more")
+
+
 def _print_organism_stats(organism: Organism):
     """Print the organism stats table to stdout (text mode)."""
     stats = organism.stats
@@ -432,6 +668,35 @@ def _build_subcommand_parser():
     p_communities.add_argument("--output", type=str, choices=["json"], default=None,
                                help="Output format (default: text)")
 
+    # --- query ---
+    p_query = subparsers.add_parser("query", help="Query a persisted KuzuDB graph")
+    p_query.add_argument("db", type=str, help="Path to KuzuDB database")
+    p_query.add_argument("--cypher", type=str, default=None,
+                         help="Raw Cypher query to execute")
+    p_query.add_argument("--unhealthy", action="store_true",
+                         help="Show all nodes with health_score < 0.5")
+    p_query.add_argument("--hotspots", action="store_true",
+                         help="Show top 10 nodes by cyclomatic complexity")
+    p_query.add_argument("--stats", action="store_true",
+                         help="Show summary statistics from the graph")
+    p_query.add_argument("--output", type=str, choices=["json"], default=None,
+                         help="Output format (default: text)")
+
+    # --- impact-graph ---
+    p_impact_graph = subparsers.add_parser("impact-graph",
+                                           help="Blast radius from persisted graph")
+    p_impact_graph.add_argument("db", type=str, help="Path to KuzuDB database")
+    p_impact_graph.add_argument("--target", type=str, required=True,
+                                help="Name of the target symbol")
+    p_impact_graph.add_argument("--direction", type=str,
+                                choices=["upstream", "downstream"],
+                                default="upstream",
+                                help="Direction of analysis (default: upstream)")
+    p_impact_graph.add_argument("--depth", type=int, default=3,
+                                help="Maximum traversal depth (default: 3)")
+    p_impact_graph.add_argument("--output", type=str, choices=["json"], default=None,
+                                help="Output format (default: text)")
+
     return parser
 
 
@@ -450,6 +715,8 @@ def _subcommand_main():
         "index": cmd_index,
         "impact": cmd_impact,
         "communities": cmd_communities,
+        "query": cmd_query,
+        "impact-graph": cmd_impact_graph,
     }
 
     handler = dispatch.get(args.command)

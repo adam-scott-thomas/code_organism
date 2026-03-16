@@ -268,7 +268,12 @@ class TreeSitterParser:
         import_types = _IMPORT_TYPES.get(lang_key, set())
 
         # Collect all defined names -> node_id (for call edge resolution)
+        # Both bare names ("helper") and dotted names ("Config.process")
+        # are tracked so that obj.method() can resolve to the method.
         defined_names: dict[str, str] = {}
+
+        # Track class names -> set of method names for dotted-call resolution
+        class_methods: dict[str, dict[str, str]] = {}  # class_name -> {method_name -> node_id}
 
         def _make_node(
             name: str,
@@ -299,6 +304,22 @@ class TreeSitterParser:
             )
             nodes.append(org_node)
             defined_names[name] = node_id
+
+            # If this is a method, also register under "ClassName.method"
+            if node_type == NodeType.METHOD:
+                # Walk up the parent chain to find the owning class name
+                parent_org = next(
+                    (n for n in nodes if n.id == parent_id
+                     and n.node_type == NodeType.CLASS),
+                    None,
+                )
+                if parent_org:
+                    dotted = f"{parent_org.name}.{name}"
+                    defined_names[dotted] = node_id
+                    if parent_org.name not in class_methods:
+                        class_methods[parent_org.name] = {}
+                    class_methods[parent_org.name][name] = node_id
+
             return org_node
 
         def _add_edge(source_id: str, target_id: str, edge_type: str) -> None:
@@ -374,9 +395,9 @@ class TreeSitterParser:
             if ts_node.type == "call_expression":
                 callee_name = _resolve_callee(ts_node)
                 if callee_name:
-                    # Try to resolve to a known definition
-                    if callee_name in defined_names:
-                        _add_edge(caller_id, defined_names[callee_name], "call")
+                    target_id = _resolve_call_target(ts_node, callee_name)
+                    if target_id:
+                        _add_edge(caller_id, target_id, "call")
                     else:
                         # Create a builtin/external node
                         callee_id = OrganismNode.generate_id(
@@ -392,6 +413,34 @@ class TreeSitterParser:
                         _add_edge(caller_id, callee_id, "call")
             for child in ts_node.children:
                 _collect_calls(child, caller_id)
+
+        def _resolve_call_target(
+            call_node: tree_sitter.Node,
+            callee_name: str,
+        ) -> Optional[str]:
+            """Try to resolve a callee name to a defined node ID.
+
+            Resolution order:
+            1. Exact match in defined_names (handles ``foo()`` and
+               ``Class.method`` dotted names).
+            2. For ``obj.method()`` calls, check if any class in this
+               file defines a method with that name.
+            3. Return *None* if unresolved (caller creates BUILTIN node).
+            """
+            # 1. Direct lookup (bare name or dotted "Class.method")
+            if callee_name in defined_names:
+                return defined_names[callee_name]
+
+            # 2. Member-expression heuristic: if the call is obj.method(),
+            #    try matching "method" against any class's method table.
+            if call_node.children and call_node.children[0].type in (
+                "member_expression", "field_expression",
+            ):
+                for _cls_name, methods in class_methods.items():
+                    if callee_name in methods:
+                        return methods[callee_name]
+
+            return None
 
         def _resolve_callee(call_node: tree_sitter.Node) -> str:
             """Extract the callee name from a call_expression node."""
