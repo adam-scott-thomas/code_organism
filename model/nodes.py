@@ -93,24 +93,50 @@ class Metrics:
     def health_score(self) -> float:
         """
         Calculate overall health score 0.0 (dead) to 1.0 (perfect).
+
+        The score uses multiple independent penalties that combine to
+        produce a wide spread across complexity levels.  Rough targets:
+
+            CC=5,  depth=2  ->  ~0.95  (HEALTHY)
+            CC=15, depth=4  ->  ~0.70  (STRESSED)
+            CC=25, depth=6  ->  ~0.45  (INFLAMED)
+            CC=40, depth=8  ->  ~0.15  (CANCEROUS)
         """
         score = 1.0
 
-        # Penalize high complexity
-        if self.cyclomatic_complexity > 10:
-            score -= min(0.3, (self.cyclomatic_complexity - 10) * 0.03)
+        # --- Cyclomatic complexity penalty ---
+        # Kick in above CC=5; scale at 0.02 per unit, cap at 0.6
+        if self.cyclomatic_complexity > 5:
+            score -= min(0.6, (self.cyclomatic_complexity - 5) * 0.02)
 
-        # Penalize deep nesting
-        if self.depth > 4:
-            score -= min(0.2, (self.depth - 4) * 0.05)
+        # --- Cognitive complexity penalty ---
+        # Cognitive complexity captures nesting-weighted branching that
+        # cyclomatic misses.  Kick in above 8, cap at 0.3.
+        if self.cognitive_complexity > 8:
+            score -= min(0.3, (self.cognitive_complexity - 8) * 0.015)
 
-        # Penalize high instability with high afferent coupling
-        # (many depend on something unstable = fragile)
+        # --- Nesting depth penalty ---
+        # Kick in above depth 3; scale at 0.04 per level, cap at 0.4
+        if self.depth > 3:
+            score -= min(0.4, (self.depth - 3) * 0.04)
+
+        # --- Halstead difficulty penalty ---
+        # High difficulty means the code is error-prone.
+        # Kick in above 15, cap at 0.2.
+        if self.halstead_difficulty > 15:
+            score -= min(0.2, (self.halstead_difficulty - 15) * 0.005)
+
+        # --- Instability with high fan-in penalty ---
+        # Many depend on something unstable = fragile
         if self.instability > 0.8 and self.afferent_coupling > 5:
-            score -= 0.2
+            score -= 0.15
 
-        # Reward maintainability
-        score += (self.maintainability_index / 100) * 0.2 - 0.1
+        # --- Maintainability index adjustment ---
+        # MI ranges 0-100 (higher is better).  Centre at MI=50 so that
+        # a perfectly maintainable function gets a small boost and a
+        # poorly maintainable one gets a real penalty.
+        mi_normalised = max(0.0, min(100.0, self.maintainability_index))
+        score += (mi_normalised / 100.0) * 0.3 - 0.15
 
         return max(0.0, min(1.0, score))
 
@@ -230,14 +256,20 @@ class OrganismNode:
         # Check for specific conditions
         self.health_notes.clear()
 
-        # Dead code detection
+        # Dead code detection — only flag functions that are clearly
+        # internal and have no callers.  Public functions (no leading
+        # underscore) may be part of a library/package API and called by
+        # external consumers, so we do NOT mark them necrotic.
+        # Dunder methods (__init__, __repr__, etc.) are never necrotic.
         if (self.node_type in (NodeType.FUNCTION, NodeType.METHOD)
-            and len(self.called_by) == 0
-            and self.name != "__init__"
-            and not self.name.startswith("_")):
-            self.health = HealthStatus.NECROTIC
-            self.health_notes.append("Never called - dead code")
-            return
+            and len(self.called_by) == 0):
+            is_dunder = self.name.startswith("__") and self.name.endswith("__")
+            is_private = self.name.startswith("_") and not is_dunder
+            is_nested = ".<locals>." in self.qualified_name
+            if not is_dunder and (is_private or is_nested):
+                self.health = HealthStatus.NECROTIC
+                self.health_notes.append("Uncalled private/nested code")
+                return
 
         # Circular dependency (simplified check)
         if self.id in self.imports or self.id in self.calls:
