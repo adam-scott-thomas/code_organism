@@ -1,22 +1,372 @@
 """
 CODE ORGANISM: Command Line Interface
 
-Usage:
-    python -m code_organism path/to/file.py
-    python -m code_organism path/to/directory/
-    python -m code_organism --export organism.json path/to/project/
-    python -m code_organism --playback recording.corg.gz
+Usage (legacy):
+    python -m Code_Organism path/to/file.py
+    python -m Code_Organism path/to/directory/
+    python -m Code_Organism --export organism.json path/to/project/
+    python -m Code_Organism --playback recording.corg.gz
+
+Usage (subcommands):
+    code-organism analyze <path> [--output json]
+    code-organism health <path> [--output json]
+    code-organism index <path> [--db PATH] [--output json]
+    code-organism impact <path> --target NAME [--output json]
+    code-organism communities <path> [--output json]
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
 from .model import Organism
-from .renderer import render_organism, render_organism_instanced, render_playback_file, render_solar_system
+
+# Subcommands recognized by the new CLI
+SUBCOMMANDS = {"analyze", "health", "index", "impact", "communities"}
 
 
-def main():
+def _output_json(data, file=None):
+    """Write JSON data to stdout (or file). All non-JSON goes to stderr."""
+    text = json.dumps(data, indent=2, default=str)
+    if file:
+        Path(file).write_text(text, encoding="utf-8")
+    else:
+        print(text)
+
+
+def _info(msg):
+    """Print an informational message to stderr (safe for --output json)."""
+    print(msg, file=sys.stderr)
+
+
+def _build_organism(target: Path, pattern: str = "**/*.py") -> Organism:
+    """Build an Organism from a file or directory path."""
+    _info(f"Analyzing {'directory' if target.is_dir() else 'file'}: {target}")
+    if target.is_dir():
+        return Organism.from_directory(target, pattern=pattern)
+    else:
+        return Organism.from_file(target)
+
+
+def _organism_to_json(organism: Organism) -> dict:
+    """Convert an organism to the JSON output schema for analyze."""
+    stats = organism.stats
+    nodes = []
+    for node in organism.nodes.values():
+        nodes.append({
+            "id": node.id,
+            "name": node.name,
+            "qualified_name": node.qualified_name,
+            "type": node.node_type.value,
+            "health_status": node.health.value,
+            "health_score": node.metrics.health_score(),
+            "cyclomatic_complexity": node.metrics.cyclomatic_complexity,
+            "lines_of_code": node.metrics.lines_of_code,
+            "depth": node.metrics.depth,
+        })
+    edges = []
+    for edge in organism.edges.values():
+        edges.append({
+            "id": edge.id,
+            "source": edge.source_id,
+            "target": edge.target_id,
+            "type": edge.edge_type,
+            "weight": edge.weight,
+        })
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "stats": {
+            "total_nodes": stats.total_nodes,
+            "total_edges": stats.total_edges,
+            "total_modules": stats.total_modules,
+            "total_classes": stats.total_classes,
+            "total_functions": stats.total_functions,
+            "total_lines": stats.total_lines,
+            "avg_complexity": stats.avg_complexity,
+            "max_complexity": stats.max_complexity,
+            "max_depth": stats.max_depth,
+            "circular_dependencies": stats.circular_dependencies,
+            "healthy_nodes": stats.healthy_nodes,
+            "stressed_nodes": stats.stressed_nodes,
+            "inflamed_nodes": stats.inflamed_nodes,
+            "necrotic_nodes": stats.necrotic_nodes,
+            "cancerous_nodes": stats.cancerous_nodes,
+        },
+    }
+
+
+def _health_to_json(organism: Organism) -> dict:
+    """Convert organism health data to the JSON output schema."""
+    stats = organism.stats
+    health_summary = stats.health_summary()
+    nodes = []
+    for node in organism.nodes.values():
+        nodes.append({
+            "name": node.name,
+            "qualified_name": node.qualified_name,
+            "type": node.node_type.value,
+            "health_status": node.health.value,
+            "health_score": node.metrics.health_score(),
+            "cyclomatic_complexity": node.metrics.cyclomatic_complexity,
+            "lines_of_code": node.metrics.lines_of_code,
+            "health_notes": node.health_notes,
+        })
+    return {
+        "health_summary": health_summary,
+        "nodes": nodes,
+    }
+
+
+def _malware_result_to_json(results: list) -> dict:
+    """Aggregate malware scan results into JSON output schema.
+
+    Args:
+        results: list of (filepath, MalwareAnalysisResult) tuples
+    """
+    all_markers = []
+    max_risk = 0.0
+    any_likely = False
+    for filepath, result in results:
+        max_risk = max(max_risk, result.overall_risk)
+        any_likely = any_likely or result.is_likely_malware
+        for marker in result.markers:
+            all_markers.append({
+                "file": str(filepath),
+                "pattern_name": marker.pattern_name,
+                "severity": marker.severity.value,
+                "description": marker.description,
+                "location": marker.location,
+                "confidence": marker.confidence,
+                "category": marker.category,
+            })
+    return {
+        "overall_risk": max_risk,
+        "is_likely_malware": any_likely,
+        "markers": all_markers,
+    }
+
+
+def _complexity_to_json(all_functions: list) -> dict:
+    """Convert complexity metrics to JSON output schema."""
+    items = []
+    for func in all_functions:
+        items.append({
+            "name": func.name,
+            "location": func.location,
+            "cyclomatic": func.cyclomatic,
+            "cognitive": func.cognitive,
+            "maintainability_index": func.maintainability_index,
+            "lines_of_code": func.lines_of_code,
+            "max_nesting_depth": func.max_nesting_depth,
+        })
+    return {"complexity": items}
+
+
+# =========================================================================
+# SUBCOMMAND HANDLERS
+# =========================================================================
+
+
+def cmd_analyze(args):
+    """Handle the 'analyze' subcommand."""
+    target = Path(args.path)
+    if not target.exists():
+        _info(f"Error: '{target}' does not exist")
+        sys.exit(1)
+
+    try:
+        organism = _build_organism(target, pattern=args.pattern)
+    except Exception as e:
+        _info(f"Error analyzing code: {e}")
+        sys.exit(1)
+
+    if args.output == "json":
+        _output_json(_organism_to_json(organism))
+    else:
+        _print_organism_stats(organism)
+
+
+def cmd_health(args):
+    """Handle the 'health' subcommand."""
+    target = Path(args.path)
+    if not target.exists():
+        _info(f"Error: '{target}' does not exist")
+        sys.exit(1)
+
+    try:
+        organism = _build_organism(target)
+    except Exception as e:
+        _info(f"Error analyzing code: {e}")
+        sys.exit(1)
+
+    if args.output == "json":
+        _output_json(_health_to_json(organism))
+    else:
+        _print_health_report(organism)
+
+
+def cmd_index(args):
+    """Handle the 'index' subcommand (stub)."""
+    _info("Not yet implemented: graph persistence requires the graph/ module.")
+    sys.exit(0)
+
+
+def cmd_impact(args):
+    """Handle the 'impact' subcommand (stub)."""
+    _info("Not yet implemented: blast radius analysis requires the graph/ module.")
+    sys.exit(0)
+
+
+def cmd_communities(args):
+    """Handle the 'communities' subcommand (stub)."""
+    _info("Not yet implemented: community detection requires the graph/ module.")
+    sys.exit(0)
+
+
+def _print_organism_stats(organism: Organism):
+    """Print the organism stats table to stdout (text mode)."""
+    stats = organism.stats
+    print(f"""
++--------------------------------------------------------------+
+|                    ORGANISM ANALYSIS                          |
++--------------------------------------------------------------+
+|  Name:           {organism.name:42} |
+|  Modules:        {stats.total_modules:42} |
+|  Classes:        {stats.total_classes:42} |
+|  Functions:      {stats.total_functions:42} |
+|  Total Nodes:    {stats.total_nodes:42} |
+|  Connections:    {stats.total_edges:42} |
+|  Lines of Code:  {stats.total_lines:42} |
++--------------------------------------------------------------+
+|  COMPLEXITY                                                   |
++--------------------------------------------------------------+
+|  Avg Complexity: {stats.avg_complexity:42.2f} |
+|  Max Complexity: {stats.max_complexity:42} |
+|  Max Depth:      {stats.max_depth:42} |
+|  Circular Deps:  {stats.circular_dependencies:42} |
++--------------------------------------------------------------+
+|  HEALTH                                                       |
++--------------------------------------------------------------+
+|  Healthy:        {stats.healthy_nodes:42} |
+|  Stressed:       {stats.stressed_nodes:42} |
+|  Inflamed:       {stats.inflamed_nodes:42} |
+|  Necrotic:       {stats.necrotic_nodes:42} |
+|  Cancerous:      {stats.cancerous_nodes:42} |
++--------------------------------------------------------------+
+""")
+
+
+def _print_health_report(organism: Organism):
+    """Print a health report to stdout (text mode)."""
+    stats = organism.stats
+    summary = stats.health_summary()
+    print("Health Summary:")
+    for status, pct in summary.items():
+        bar = "#" * int(pct * 40)
+        print(f"  {status:12} {pct:6.1%}  {bar}")
+    print()
+    # Show unhealthy nodes
+    unhealthy = [n for n in organism.nodes.values() if n.health.value not in ("healthy", "unknown")]
+    if unhealthy:
+        print(f"Unhealthy nodes ({len(unhealthy)}):")
+        for node in unhealthy[:20]:
+            notes = "; ".join(node.health_notes) if node.health_notes else ""
+            print(f"  [{node.health.value:>10}] {node.qualified_name}  {notes}")
+        if len(unhealthy) > 20:
+            print(f"  ... and {len(unhealthy) - 20} more")
+
+
+# =========================================================================
+# NEW SUBCOMMAND-BASED CLI
+# =========================================================================
+
+
+def _build_subcommand_parser():
+    """Build the argparse parser with subcommands."""
+    parser = argparse.ArgumentParser(
+        prog="code-organism",
+        description="Code_Organism analysis engine",
+    )
+    parser.add_argument("--version", action="version", version="code-organism 2.0.0")
+
+    subparsers = parser.add_subparsers(dest="command")
+
+    # --- analyze ---
+    p_analyze = subparsers.add_parser("analyze", help="Parse and return organism data")
+    p_analyze.add_argument("path", type=str, help="Python file or directory to analyze")
+    p_analyze.add_argument("--output", type=str, choices=["json"], default=None,
+                           help="Output format (default: text)")
+    p_analyze.add_argument("--pattern", type=str, default="**/*.py",
+                           help="Glob pattern for files (default: **/*.py)")
+
+    # --- health ---
+    p_health = subparsers.add_parser("health", help="Health diagnostics")
+    p_health.add_argument("path", type=str, help="Python file or directory to analyze")
+    p_health.add_argument("--output", type=str, choices=["json"], default=None,
+                          help="Output format (default: text)")
+
+    # --- index ---
+    p_index = subparsers.add_parser("index", help="Analyze and persist to graph database")
+    p_index.add_argument("path", type=str, help="Python file or directory to analyze")
+    p_index.add_argument("--db", type=str, default=None, help="Path to KuzuDB database")
+    p_index.add_argument("--output", type=str, choices=["json"], default=None,
+                         help="Output format (default: text)")
+
+    # --- impact ---
+    p_impact = subparsers.add_parser("impact", help="Blast radius analysis")
+    p_impact.add_argument("path", type=str, help="Python file or directory to analyze")
+    p_impact.add_argument("--target", type=str, required=True,
+                          help="Name of the target node to analyze")
+    p_impact.add_argument("--direction", type=str, choices=["upstream", "downstream"],
+                          default="downstream", help="Direction of analysis")
+    p_impact.add_argument("--output", type=str, choices=["json"], default=None,
+                          help="Output format (default: text)")
+
+    # --- communities ---
+    p_communities = subparsers.add_parser("communities", help="Community detection")
+    p_communities.add_argument("path", type=str, help="Python file or directory to analyze")
+    p_communities.add_argument("--output", type=str, choices=["json"], default=None,
+                               help="Output format (default: text)")
+
+    return parser
+
+
+def _subcommand_main():
+    """Entry point for the new subcommand-based CLI."""
+    parser = _build_subcommand_parser()
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
+    dispatch = {
+        "analyze": cmd_analyze,
+        "health": cmd_health,
+        "index": cmd_index,
+        "impact": cmd_impact,
+        "communities": cmd_communities,
+    }
+
+    handler = dispatch.get(args.command)
+    if handler:
+        handler(args)
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+
+# =========================================================================
+# LEGACY CLI (original main, preserved for backward compatibility)
+# =========================================================================
+
+
+def _legacy_main():
+    """Original CLI entry point — handles positional path + flag-based modes."""
+    from .renderer import render_organism, render_organism_instanced, render_playback_file, render_solar_system
+
     parser = argparse.ArgumentParser(
         description="Code Organism Visualizer - See the soul of software",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -110,6 +460,14 @@ Examples:
         help="Use solar system navigation (click-to-expand cosmic hierarchy)",
     )
 
+    parser.add_argument(
+        "--output",
+        type=str,
+        choices=["json"],
+        default=None,
+        help="Output format (default: text)",
+    )
+
     args = parser.parse_args()
 
     # Handle playback mode
@@ -136,7 +494,10 @@ Examples:
         return run_complexity_analysis(target, args)
 
     # Analyze
-    print(f"Analyzing {'directory' if target.is_dir() else 'file'}: {target}")
+    if args.output == "json":
+        _info(f"Analyzing {'directory' if target.is_dir() else 'file'}: {target}")
+    else:
+        print(f"Analyzing {'directory' if target.is_dir() else 'file'}: {target}")
 
     try:
         if target.is_dir():
@@ -147,38 +508,21 @@ Examples:
         print(f"Error analyzing code: {e}")
         sys.exit(1)
 
+    # JSON output for stats/analyze mode
+    if args.output == "json":
+        _output_json(_organism_to_json(organism))
+        # Also export if requested
+        if args.export:
+            export_path = Path(args.export)
+            organism.save(export_path)
+            _info(f"Exported to: {export_path}")
+        return
+
     # Print stats
-    stats = organism.stats
-    print(f"""
-+--------------------------------------------------------------+
-|                    ORGANISM ANALYSIS                          |
-+--------------------------------------------------------------+
-|  Name:           {organism.name:42} |
-|  Modules:        {stats.total_modules:42} |
-|  Classes:        {stats.total_classes:42} |
-|  Functions:      {stats.total_functions:42} |
-|  Total Nodes:    {stats.total_nodes:42} |
-|  Connections:    {stats.total_edges:42} |
-|  Lines of Code:  {stats.total_lines:42} |
-+--------------------------------------------------------------+
-|  COMPLEXITY                                                   |
-+--------------------------------------------------------------+
-|  Avg Complexity: {stats.avg_complexity:42.2f} |
-|  Max Complexity: {stats.max_complexity:42} |
-|  Max Depth:      {stats.max_depth:42} |
-|  Circular Deps:  {stats.circular_dependencies:42} |
-+--------------------------------------------------------------+
-|  HEALTH                                                       |
-+--------------------------------------------------------------+
-|  Healthy:        {stats.healthy_nodes:42} |
-|  Stressed:       {stats.stressed_nodes:42} |
-|  Inflamed:       {stats.inflamed_nodes:42} |
-|  Necrotic:       {stats.necrotic_nodes:42} |
-|  Cancerous:      {stats.cancerous_nodes:42} |
-+--------------------------------------------------------------+
-""")
+    _print_organism_stats(organism)
 
     # Report hotspots
+    stats = organism.stats
     if stats.complexity_hotspots:
         print("Complexity Hotspots:")
         for hotspot in stats.complexity_hotspots[:5]:
@@ -254,6 +598,8 @@ Examples:
 
 def run_playback(args):
     """Run playback mode."""
+    from .renderer import render_playback_file
+
     filepath = Path(args.playback)
 
     if not filepath.exists():
@@ -282,14 +628,20 @@ def run_malware_scan(target: Path, args):
     """Run malware pattern scan."""
     from .health import analyze_for_malware
 
-    print(f"Scanning for malware patterns: {target}")
-    print()
+    json_mode = getattr(args, "output", None) == "json"
+
+    if json_mode:
+        _info(f"Scanning for malware patterns: {target}")
+    else:
+        print(f"Scanning for malware patterns: {target}")
+        print()
 
     if target.is_file():
         files = [target]
     else:
         files = list(target.glob(args.pattern))
 
+    results = []  # (filepath, MalwareAnalysisResult) for JSON mode
     total_markers = 0
     critical_count = 0
 
@@ -299,8 +651,9 @@ def run_malware_scan(target: Path, args):
                 source = f.read()
 
             result = analyze_for_malware(source, str(filepath))
+            results.append((filepath, result))
 
-            if result.markers:
+            if not json_mode and result.markers:
                 print(f"\n[!] {filepath}")
                 for marker in result.markers:
                     severity_icon = {
@@ -320,21 +673,32 @@ def run_malware_scan(target: Path, args):
                         critical_count += 1
 
         except Exception as e:
-            print(f"Error scanning {filepath}: {e}")
+            if json_mode:
+                _info(f"Error scanning {filepath}: {e}")
+            else:
+                print(f"Error scanning {filepath}: {e}")
 
-    print()
-    print(f"Scan complete: {len(files)} files scanned")
-    print(f"Findings: {total_markers} suspicious patterns")
-    if critical_count:
-        print(f"[!] CRITICAL: {critical_count} critical issues found!")
+    if json_mode:
+        _output_json(_malware_result_to_json(results))
+    else:
+        print()
+        print(f"Scan complete: {len(files)} files scanned")
+        print(f"Findings: {total_markers} suspicious patterns")
+        if critical_count:
+            print(f"[!] CRITICAL: {critical_count} critical issues found!")
 
 
 def run_complexity_analysis(target: Path, args):
     """Run detailed complexity analysis."""
     from .health import analyze_complexity
 
-    print(f"Analyzing complexity: {target}")
-    print()
+    json_mode = getattr(args, "output", None) == "json"
+
+    if json_mode:
+        _info(f"Analyzing complexity: {target}")
+    else:
+        print(f"Analyzing complexity: {target}")
+        print()
 
     if target.is_file():
         files = [target]
@@ -352,34 +716,71 @@ def run_complexity_analysis(target: Path, args):
             all_functions.extend(report.functions)
 
         except Exception as e:
-            print(f"Error analyzing {filepath}: {e}")
+            if json_mode:
+                _info(f"Error analyzing {filepath}: {e}")
+            else:
+                print(f"Error analyzing {filepath}: {e}")
 
     # Sort by complexity
     all_functions.sort(key=lambda f: f.cyclomatic, reverse=True)
 
-    print("+--------------------------------------------------------------+")
-    print("|                    COMPLEXITY REPORT                          |")
-    print("+--------------------------------------------------------------+")
-    print(f"| Total functions analyzed: {len(all_functions):33} |")
-    print("+--------------------------------------------------------------+")
-    print()
-
-    if all_functions:
-        avg_cyclomatic = sum(f.cyclomatic for f in all_functions) / len(all_functions)
-        avg_cognitive = sum(f.cognitive for f in all_functions) / len(all_functions)
-        avg_maintainability = sum(f.maintainability_index for f in all_functions) / len(all_functions)
-
-        print(f"Average Cyclomatic Complexity: {avg_cyclomatic:.2f}")
-        print(f"Average Cognitive Complexity:  {avg_cognitive:.2f}")
-        print(f"Average Maintainability Index: {avg_maintainability:.2f}")
+    if json_mode:
+        _output_json(_complexity_to_json(all_functions))
+    else:
+        print("+--------------------------------------------------------------+")
+        print("|                    COMPLEXITY REPORT                          |")
+        print("+--------------------------------------------------------------+")
+        print(f"| Total functions analyzed: {len(all_functions):33} |")
+        print("+--------------------------------------------------------------+")
         print()
 
-        print("Top 10 Most Complex Functions:")
-        print("-" * 70)
-        for func in all_functions[:10]:
-            print(f"  {func.name:30} CC={func.cyclomatic:3}  COG={func.cognitive:3}  MI={func.maintainability_index:.1f}")
-            print(f"    {func.location}")
-        print()
+        if all_functions:
+            avg_cyclomatic = sum(f.cyclomatic for f in all_functions) / len(all_functions)
+            avg_cognitive = sum(f.cognitive for f in all_functions) / len(all_functions)
+            avg_maintainability = sum(f.maintainability_index for f in all_functions) / len(all_functions)
+
+            print(f"Average Cyclomatic Complexity: {avg_cyclomatic:.2f}")
+            print(f"Average Cognitive Complexity:  {avg_cognitive:.2f}")
+            print(f"Average Maintainability Index: {avg_maintainability:.2f}")
+            print()
+
+            print("Top 10 Most Complex Functions:")
+            print("-" * 70)
+            for func in all_functions[:10]:
+                print(f"  {func.name:30} CC={func.cyclomatic:3}  COG={func.cognitive:3}  MI={func.maintainability_index:.1f}")
+                print(f"    {func.location}")
+            print()
+
+
+# =========================================================================
+# MAIN ENTRY POINT — detects legacy vs. subcommand invocation
+# =========================================================================
+
+
+def main():
+    """
+    Main entry point. Detects whether the user is invoking a new subcommand
+    or using the legacy flag-based CLI, and dispatches accordingly.
+    """
+    # If no arguments at all, or first arg is --version, use new CLI
+    if len(sys.argv) <= 1:
+        _subcommand_main()
+        return
+
+    first_arg = sys.argv[1]
+
+    # If the first arg is a known subcommand, use new CLI
+    if first_arg in SUBCOMMANDS:
+        _subcommand_main()
+        return
+
+    # If the first arg is --version, use new CLI (it handles --version)
+    if first_arg == "--version":
+        _subcommand_main()
+        return
+
+    # Otherwise, delegate to the legacy CLI
+    _legacy_main()
 
 
 if __name__ == "__main__":
