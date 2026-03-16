@@ -70,7 +70,12 @@ from .health import (
     analyze_complexity,
 )
 
-__version__ = "0.1.0"
+from .graph.store import GraphStore
+from .analysis.communities import detect_communities
+from .analysis.processes import detect_processes
+from .analysis.impact import analyze_impact
+
+__version__ = "2.0.0"
 
 __all__ = [
     # Core Model
@@ -113,4 +118,10 @@ __all__ = [
     "detect_patterns",
     "ComplexityAnalyzer",
     "analyze_complexity",
+    # Graph Storage
+    "GraphStore",
+    # Analysis
+    "detect_communities",
+    "detect_processes",
+    "analyze_impact",
 ]

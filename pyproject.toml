@@ -4,9 +4,25 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "code-organism"
-version = "0.1.0"
-description = "3D code visualization - see the soul of software"
+version = "2.0.0"
+description = "Code analysis engine with 3D visualization, health diagnostics, and persistent graph storage"
 requires-python = ">=3.10"
+dependencies = [
+    "kuzu==0.11.3",
+    "tree-sitter>=0.25.0",
+    "tree-sitter-python>=0.25.0",
+    "tree-sitter-javascript>=0.25.0",
+    "tree-sitter-typescript>=0.23.0",
+    "tree-sitter-java>=0.23.0",
+    "tree-sitter-go>=0.25.0",
+    "tree-sitter-rust>=0.24.0",
+    "tree-sitter-c>=0.24.0",
+    "tree-sitter-cpp>=0.23.0",
+    "igraph>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
 
 [project.scripts]
 code-organism = "Code_Organism.cli:main"

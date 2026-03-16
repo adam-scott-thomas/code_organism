@@ -208,21 +208,123 @@ def cmd_health(args):
 
 
 def cmd_index(args):
-    """Handle the 'index' subcommand (stub)."""
-    _info("Not yet implemented: graph persistence requires the graph/ module.")
-    sys.exit(0)
+    """Handle the 'index' subcommand — analyze and persist to KuzuDB."""
+    from .graph.store import GraphStore
+    from .analysis.communities import detect_communities
+    from .analysis.processes import detect_processes
+
+    target = Path(args.path)
+    if not target.exists():
+        _info(f"Error: '{target}' does not exist")
+        sys.exit(1)
+
+    organism = _build_organism(target, getattr(args, "pattern", "**/*.py"))
+    organism.analyze_health()
+
+    db_path = Path(args.db)
+    if not db_path.is_absolute():
+        db_path = (target if target.is_dir() else target.parent) / args.db
+
+    with GraphStore(db_path) as store:
+        store.save(organism)
+        node_count = store.count_nodes()
+
+        # Detect and store communities
+        communities = detect_communities(organism)
+        for comm in communities:
+            store._conn.execute(
+                "CREATE (:Community {uid: $uid, name: $name, keywords: $kw, cohesion: $coh, symbolCount: $sc})",
+                parameters={
+                    "uid": comm["id"], "name": comm["name"],
+                    "kw": ", ".join(comm.get("keywords", [])),
+                    "coh": comm.get("cohesion", 0.0),
+                    "sc": len(comm.get("members", [])),
+                },
+            )
+
+        # Detect and store processes
+        processes = detect_processes(organism)
+        for proc in processes:
+            store._conn.execute(
+                "CREATE (:Process {uid: $uid, name: $name, entryPointId: $ep, stepCount: $sc, processType: $pt})",
+                parameters={
+                    "uid": proc["id"], "name": proc["name"],
+                    "ep": proc.get("entry_point", ""),
+                    "sc": proc.get("step_count", 0),
+                    "pt": "call_chain",
+                },
+            )
+
+    edge_count = len(organism.edges)
+    if getattr(args, "output", "text") == "json":
+        _output_json({
+            "nodes_indexed": node_count,
+            "edges_indexed": edge_count,
+            "communities": len(communities),
+            "processes": len(processes),
+            "db_path": str(db_path),
+        })
+    else:
+        _info(f"Indexed {node_count} nodes, {edge_count} edges, "
+              f"{len(communities)} communities, {len(processes)} processes → {db_path}")
 
 
 def cmd_impact(args):
-    """Handle the 'impact' subcommand (stub)."""
-    _info("Not yet implemented: blast radius analysis requires the graph/ module.")
-    sys.exit(0)
+    """Handle the 'impact' subcommand — blast radius analysis."""
+    from .analysis.impact import analyze_impact
+
+    target = Path(args.path)
+    if not target.exists():
+        _info(f"Error: '{target}' does not exist")
+        sys.exit(1)
+
+    organism = _build_organism(target, getattr(args, "pattern", "**/*.py"))
+
+    # Find the target node by name
+    matches = organism.find_nodes(args.target)
+    if not matches:
+        _info(f"Error: symbol '{args.target}' not found")
+        if getattr(args, "output", "text") == "json":
+            _output_json({"error": f"symbol '{args.target}' not found", "depth_1": [], "depth_2": [], "depth_3": []})
+        sys.exit(1)
+
+    target_node = matches[0]
+    direction = getattr(args, "direction", "upstream")
+    max_depth = getattr(args, "depth", 3)
+
+    result = analyze_impact(organism, target_node.id, direction=direction, max_depth=max_depth)
+
+    if getattr(args, "output", "text") == "json":
+        _output_json(result)
+    else:
+        for depth_key in sorted(result.keys()):
+            items = result[depth_key]
+            label = {"depth_1": "WILL BREAK", "depth_2": "LIKELY AFFECTED", "depth_3": "MAY NEED TESTING"}.get(depth_key, depth_key)
+            print(f"\n{depth_key} ({label}): {len(items)} symbols")
+            for item in items[:10]:
+                print(f"  - {item['name']} ({item['edge_type']}) {item.get('file', '')}")
 
 
 def cmd_communities(args):
-    """Handle the 'communities' subcommand (stub)."""
-    _info("Not yet implemented: community detection requires the graph/ module.")
-    sys.exit(0)
+    """Handle the 'communities' subcommand — Leiden community detection."""
+    from .analysis.communities import detect_communities
+
+    target = Path(args.path)
+    if not target.exists():
+        _info(f"Error: '{target}' does not exist")
+        sys.exit(1)
+
+    organism = _build_organism(target, getattr(args, "pattern", "**/*.py"))
+    communities = detect_communities(organism)
+
+    if getattr(args, "output", "text") == "json":
+        _output_json({"communities": communities, "total": len(communities)})
+    else:
+        print(f"\nDetected {len(communities)} communities:\n")
+        for comm in communities:
+            print(f"  [{comm['id']}] {comm['name']} — {len(comm['members'])} members, cohesion={comm['cohesion']:.2f}")
+            for kw in comm.get("keywords", [])[:5]:
+                print(f"    - {kw}")
 
 
 def _print_organism_stats(organism: Organism):

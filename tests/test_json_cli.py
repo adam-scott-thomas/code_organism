@@ -319,23 +319,26 @@ class TestVersion:
 # =========================================================================
 
 
-class TestStubSubcommands:
-    """Tests that stub subcommands don't crash."""
+class TestLiveSubcommands:
+    """Tests that index/impact/communities subcommands work."""
 
-    def test_index_stub(self, sample_file):
-        stdout, stderr, rc = run_cli("index", str(sample_file))
+    def test_index_runs(self, sample_file, tmp_path):
+        db_path = tmp_path / ".code_organism"
+        stdout, stderr, rc = run_cli("index", str(sample_file), "--db", str(db_path), "--output", "json")
         assert rc == 0
-        assert "Not yet implemented" in stderr
+        data = json.loads(stdout)
+        assert data["nodes_indexed"] > 0
 
-    def test_impact_stub(self, sample_file):
-        stdout, stderr, rc = run_cli("impact", str(sample_file), "--target", "foo")
-        assert rc == 0
-        assert "Not yet implemented" in stderr
+    def test_impact_runs(self, sample_file):
+        stdout, stderr, rc = run_cli("impact", str(sample_file), "--target", "helper", "--output", "json")
+        # May exit 0 (found) or 1 (not found depending on parse)
+        assert rc in (0, 1)
 
-    def test_communities_stub(self, sample_file):
-        stdout, stderr, rc = run_cli("communities", str(sample_file))
+    def test_communities_runs(self, sample_file):
+        stdout, stderr, rc = run_cli("communities", str(sample_file), "--output", "json")
         assert rc == 0
-        assert "Not yet implemented" in stderr
+        data = json.loads(stdout)
+        assert "communities" in data
 
 
 # =========================================================================
