@@ -1,0 +1,223 @@
+{
+  "nodes": {
+    "s1": "stressor_vec = compute_stressor_vector",
+    "s2": "s_map = stressor_dict",
+    "s3": "deformed = deform_all",
+    "s4": "leg_summary = legality_summary",
+    "s5": "c_dict = constraint_state_dict",
+    "s6": "penalties = compute_all_penalties",
+    "s7": "gradients = compute_gradients",
+    "s8": "active_regime = select_active_regime",
+    "s9": "switch_decision = regime_switch_trace",
+    "s10": "all_proposals = generate_all_proposals",
+    "s11": "(filtered_proposals, veto_events) = apply_overlays",
+    "s12": "veto_event_dicts = to_dict",
+    "s13": "orig_ids = get",
+    "s14": "kept_ids = get",
+    "s15": "append",
+    "s16": "governance_disallow = canonical_path_admissible",
+    "s17": "bypass_eligibilities = check_bypass_eligibility",
+    "s18": "selected_bp = select_bypass",
+    "s19": "(execution_path, bypass_event) = determine_execution_path",
+    "s20": "add",
+    "s21": "append",
+    "s22": "phase_proposals = get",
+    "s23": "best = select_best_proposal",
+    "s24": "executed_value = score_proposal_for_regime",
+    "s25": "terminal_proposals = get",
+    "s26": "terminal_best = select_best_proposal",
+    "s27": "executed_value = score_proposal_for_regime",
+    "s28": "skipped_props = get",
+    "s29": "entries = archive_proposals",
+    "s30": "extend",
+    "s31": "phase_proposals = get",
+    "s32": "selected_id = get",
+    "s33": "entries = archive_proposals",
+    "s34": "extend",
+    "s35": "orig = get",
+    "s36": "kept_ids = get",
+    "s37": "entries = archive_proposals",
+    "s38": "extend",
+    "s39": "regret = compute_regret",
+    "s40": "doctrine_candidates = generate_doctrine_candidates",
+    "s41": "record = candidate_to_record",
+    "s42": "append",
+    "s43": "(identity_veto) = any_identity_veto",
+    "s44": "(coalition_veto) = any_coalition_veto",
+    "s45": "(coalition_drag) = coalition_drag_level",
+    "s46": "self.constraint_state = update_constraint_state",
+    "s47": "append",
+    "s48": "s_hash = hash_state",
+    "s49": "trace = CycleTrace",
+    "s50": "append"
+  },
+  "edges": {
+    "s1": [
+      "s2",
+      "s3",
+      "s6"
+    ],
+    "s2": [
+      "s10",
+      "s11",
+      "s17",
+      "s49"
+    ],
+    "s3": [
+      "s4",
+      "s16",
+      "s17"
+    ],
+    "s4": [
+      "s5",
+      "s49"
+    ],
+    "s5": [
+      "s49"
+    ],
+    "s6": [
+      "s7",
+      "s47",
+      "s49"
+    ],
+    "s7": [
+      "s8",
+      "s9",
+      "s49"
+    ],
+    "s8": [
+      "s9",
+      "s17",
+      "s23",
+      "s24",
+      "s26",
+      "s27",
+      "s29",
+      "s33",
+      "s37",
+      "s39",
+      "s40",
+      "s41",
+      "s49"
+    ],
+    "s9": [
+      "s40",
+      "s49"
+    ],
+    "s10": [
+      "s11",
+      "s49"
+    ],
+    "s11": [
+      "s12",
+      "s46"
+    ],
+    "s12": [
+      "s13",
+      "s40",
+      "s49"
+    ],
+    "s13": [
+      "s14"
+    ],
+    "s14": [
+      "s15"
+    ],
+    "s15": [],
+    "s16": [
+      "s40",
+      "s46"
+    ],
+    "s17": [
+      "s18"
+    ],
+    "s18": [
+      "s19"
+    ],
+    "s19": [
+      "s20"
+    ],
+    "s20": [
+      "s21"
+    ],
+    "s21": [
+      "s22"
+    ],
+    "s22": [],
+    "s23": [
+      "s24",
+      "s27"
+    ],
+    "s24": [
+      "s25"
+    ],
+    "s25": [
+      "s26"
+    ],
+    "s26": [
+      "s27"
+    ],
+    "s27": [
+      "s28",
+      "s39"
+    ],
+    "s28": [
+      "s29"
+    ],
+    "s29": [
+      "s30"
+    ],
+    "s30": [
+      "s31"
+    ],
+    "s31": [
+      "s32"
+    ],
+    "s32": [],
+    "s33": [
+      "s34"
+    ],
+    "s34": [
+      "s35"
+    ],
+    "s35": [
+      "s36"
+    ],
+    "s36": [],
+    "s37": [
+      "s38"
+    ],
+    "s38": [],
+    "s39": [
+      "s40",
+      "s49"
+    ],
+    "s40": [
+      "s49"
+    ],
+    "s41": [
+      "s42"
+    ],
+    "s42": [
+      "s43"
+    ],
+    "s43": [
+      "s44"
+    ],
+    "s44": [
+      "s45"
+    ],
+    "s45": [],
+    "s46": [],
+    "s47": [
+      "s48"
+    ],
+    "s48": [
+      "s49"
+    ],
+    "s49": [
+      "s50"
+    ],
+    "s50": []
+  }
+}

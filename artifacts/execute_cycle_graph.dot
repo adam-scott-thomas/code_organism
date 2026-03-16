@@ -1,0 +1,198 @@
+digraph "_execute_cycle" {
+    // Auto-generated from _execute_cycle() in runtime.py
+    // Lines 117-342 | 50 steps
+
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10];
+    edge [fontname="Helvetica", fontsize=8, color="#636E72"];
+
+    s1 [label="Step 3: Update S(t) stressor_vec = compute_stressor_vector()\nL121", fillcolor="#E8F4FD"];
+    s2 [label="Step 3: Update S(t) s_map = stressor_dict()\nL122", fillcolor="#E8F4FD"];
+    s3 [label="Step 4: Deform legality graph deformed = deform_all()\nL125", fillcolor="#E8F4FD"];
+    s4 [label="Step 4: Deform legality graph leg_summary = legality_summary()\nL126", fillcolor="#E8F4FD"];
+    s5 [label="Step 5: Update constraint state C(t) c_dict = constraint_state_dict()\nL131", fillcolor="#E8F4FD"];
+    s6 [label="Step 6: Compute P_r(t) and gradients penalties = compute_all_penalties()\nL134", fillcolor="#E8F4FD"];
+    s7 [label="Step 6: Compute P_r(t) and gradients gradients = compute_gradients()\nL135", fillcolor="#E8F4FD"];
+    s8 [label="Step 7: Select active regime active_regime = select_active_regime()\nL140", fillcolor="#E8F4FD"];
+    s9 [label="Regime switch decision trace switch_decision = regime_switch_trace()\nL148", fillcolor="#E8F4FD"];
+    s10 [label="Step 8: Generate proposals from all specialists all_proposals = generate_all_proposals()\nL153", fillcolor="#E8F4FD"];
+    s11 [label="Step 9: Filter by overlay vetoes (filtered_proposals, veto_events) = apply_overlays()\nL158", fillcolor="#E8F4FD"];
+    s12 [label="Step 9: Filter by overlay vetoes veto_event_dicts = to_dict()\nL161", fillcolor="#E8F4FD"];
+    s16 [label="governance_disallow = canonical_path_admissible()\nL177", fillcolor="#E8F4FD"];
+    s17 [label="Step 10: Evaluate bypass eligibility bypass_eligibilities = check_bypass_eligibility()\nL180", fillcolor="#E8F4FD"];
+    s18 [label="Step 10b: Select bypass if eligible selected_bp = select_bypass()\nL186", fillcolor="#E8F4FD"];
+    s19 [label="Step 11: Determine execution path (execution_path, bypass_event) = determine_execution_path()\nL189", fillcolor="#E8F4FD"];
+    s39 [label="Step: Compute regret regret = compute_regret()\nL266", fillcolor="#E8F4FD"];
+    s40 [label="Step: Doctrine candidates doctrine_candidates = generate_doctrine_candidates()\nL269", fillcolor="#E8F4FD"];
+    s43 [label="Update state for next cycle (identity_veto) = any_identity_veto()\nL289", fillcolor="#E8F4FD"];
+    s44 [label="Update state for next cycle (coalition_veto) = any_coalition_veto()\nL290", fillcolor="#E8F4FD"];
+    s45 [label="Update state for next cycle (coalition_drag) = coalition_drag_level()\nL291", fillcolor="#E8F4FD"];
+    s46 [label="Update state for next cycle self.constraint_state = update_constraint_state()\nL286", fillcolor="#E8F4FD"];
+    s47 [label="append()\nL295", fillcolor="#E8F4FD"];
+    s48 [label="s_hash = hash_state()\nL308", fillcolor="#E8F4FD"];
+    s49 [label="Step 13: Log trace trace = CycleTrace()\nL311", fillcolor="#E8F4FD"];
+    s50 [label="append()\nL342", fillcolor="#E8F4FD"];
+
+    subgraph cluster_loop0 {
+        label="LOOP: for phase in CANONICAL_PHASES";
+        style=dashed;
+        color="#E17055";
+        fontcolor="#E17055";
+        s13 [label="orig_ids = get()\nL166", fillcolor="#FFF3E0"];
+        s14 [label="kept_ids = get()\nL167", fillcolor="#FFF3E0"];
+        s35 [label="orig = get()\nL257", fillcolor="#FFF3E0"];
+        s36 [label="kept_ids = get()\nL258", fillcolor="#FFF3E0"];
+        s37 [label="entries = archive_proposals()\nL260", fillcolor="#FFF3E0"];
+        s38 [label="extend()\nL263", fillcolor="#FFF3E0"];
+    }
+
+    subgraph cluster_loop1 {
+        label="LOOP: for phase in CANONICAL_PHASES > for pid in sort...";
+        style=dashed;
+        color="#E17055";
+        fontcolor="#E17055";
+        s15 [label="append()\nL170", fillcolor="#FFF3E0"];
+    }
+
+    subgraph cluster_loop2 {
+        label="LOOP: for p in execution_path";
+        style=dashed;
+        color="#E17055";
+        fontcolor="#E17055";
+        s20 [label="add()\nL204", fillcolor="#FFF3E0"];
+        s21 [label="append()\nL205", fillcolor="#FFF3E0"];
+    }
+
+    subgraph cluster_loop3 {
+        label="LOOP: for phase in unique_path";
+        style=dashed;
+        color="#E17055";
+        fontcolor="#E17055";
+        s22 [label="phase_proposals = get()\nL208", fillcolor="#FFF3E0"];
+        s23 [label="best = select_best_proposal()\nL209", fillcolor="#FFF3E0"];
+        s24 [label="executed_value = score_proposal_for_regime()\nL219", fillcolor="#FFF3E0"];
+    }
+
+    subgraph cluster_loop4 {
+        label="LOOP: for phase in skipped_phases";
+        style=dashed;
+        color="#E17055";
+        fontcolor="#E17055";
+        s28 [label="Archive counterfactuals skipped_props = get()\nL239", fillcolor="#FFF3E0"];
+        s29 [label="entries = archive_proposals()\nL240", fillcolor="#FFF3E0"];
+        s30 [label="extend()\nL243", fillcolor="#FFF3E0"];
+    }
+
+    subgraph cluster_loop5 {
+        label="LOOP: for phase in execution_path";
+        style=dashed;
+        color="#E17055";
+        fontcolor="#E17055";
+        s31 [label="phase_proposals = get()\nL247", fillcolor="#FFF3E0"];
+        s32 [label="selected_id = get()\nL248", fillcolor="#FFF3E0"];
+        s33 [label="entries = archive_proposals()\nL250", fillcolor="#FFF3E0"];
+        s34 [label="extend()\nL253", fillcolor="#FFF3E0"];
+    }
+
+    subgraph cluster_loop6 {
+        label="LOOP: for dc in doctrine_candidates";
+        style=dashed;
+        color="#E17055";
+        fontcolor="#E17055";
+        s41 [label="record = candidate_to_record()\nL281", fillcolor="#FFF3E0"];
+        s42 [label="append()\nL283", fillcolor="#FFF3E0"];
+    }
+
+    subgraph cluster_if0 {
+        label="IF: 'execute' not in execution_path";
+        style=dashed;
+        color="#D63031";
+        fontcolor="#D63031";
+        s25 [label="terminal_proposals = get()\nL228", fillcolor="#FFF5F5"];
+        s26 [label="terminal_best = select_best_proposal()\nL229", fillcolor="#FFF5F5"];
+    }
+
+    subgraph cluster_if1 {
+        label="IF: 'execute' not in execution_path > terminal_best";
+        style=dashed;
+        color="#D63031";
+        fontcolor="#D63031";
+        s27 [label="executed_value = score_proposal_for_regime()\nL231", fillcolor="#FFF5F5"];
+    }
+
+    s1 -> s2;
+    s1 -> s3;
+    s1 -> s6;
+    s2 -> s10;
+    s2 -> s11;
+    s2 -> s17;
+    s2 -> s49;
+    s3 -> s4;
+    s3 -> s16;
+    s3 -> s17;
+    s4 -> s5;
+    s4 -> s49;
+    s5 -> s49;
+    s6 -> s7;
+    s6 -> s47;
+    s6 -> s49;
+    s7 -> s8;
+    s7 -> s9;
+    s7 -> s49;
+    s8 -> s9;
+    s8 -> s17;
+    s8 -> s23;
+    s8 -> s24;
+    s8 -> s26;
+    s8 -> s27;
+    s8 -> s29;
+    s8 -> s33;
+    s8 -> s37;
+    s8 -> s39;
+    s8 -> s40;
+    s8 -> s41;
+    s8 -> s49;
+    s9 -> s40;
+    s9 -> s49;
+    s10 -> s11;
+    s10 -> s49;
+    s11 -> s12;
+    s11 -> s46;
+    s12 -> s13;
+    s12 -> s40;
+    s12 -> s49;
+    s13 -> s14;
+    s14 -> s15;
+    s16 -> s40;
+    s16 -> s46;
+    s17 -> s18;
+    s18 -> s19;
+    s19 -> s20;
+    s20 -> s21;
+    s21 -> s22;
+    s23 -> s24;
+    s23 -> s27;
+    s24 -> s25;
+    s25 -> s26;
+    s26 -> s27;
+    s27 -> s28;
+    s27 -> s39;
+    s28 -> s29;
+    s29 -> s30;
+    s30 -> s31;
+    s31 -> s32;
+    s33 -> s34;
+    s34 -> s35;
+    s35 -> s36;
+    s37 -> s38;
+    s39 -> s40;
+    s39 -> s49;
+    s40 -> s49;
+    s41 -> s42;
+    s42 -> s43;
+    s43 -> s44;
+    s44 -> s45;
+    s47 -> s48;
+    s48 -> s49;
+    s49 -> s50;
+}

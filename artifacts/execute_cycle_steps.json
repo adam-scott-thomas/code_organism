@@ -1,0 +1,973 @@
+{
+  "source_file": "D:\\lost_marbles\\maelstrom_v2.0.0 - Copy\\maelstrom_runtime\\runtime.py",
+  "function": "_execute_cycle",
+  "lines": "117-342",
+  "total_steps": 50,
+  "step_labels": [
+    "Step 3: Update S(t)",
+    "Step 4: Deform legality graph",
+    "Step 5: Update constraint state C(t)",
+    "Step 6: Compute P_r(t) and gradients",
+    "Step 7: Select active regime",
+    "Regime switch decision trace",
+    "Step 8: Generate proposals from all specialists",
+    "Step 9: Filter by overlay vetoes",
+    "Step 10: Evaluate bypass eligibility",
+    "Step 10b: Select bypass if eligible",
+    "Step 11: Determine execution path",
+    "Archive counterfactuals",
+    "Step: Compute regret",
+    "Step: Doctrine candidates",
+    "Update state for next cycle",
+    "Step 13: Log trace"
+  ],
+  "steps": [
+    {
+      "order": 1,
+      "line": 121,
+      "callee": "compute_stressor_vector",
+      "full_callee": "compute_stressor_vector",
+      "outputs": [
+        "stressor_vec"
+      ],
+      "args": [
+        "self.spec",
+        "t"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 3: Update S(t)"
+    },
+    {
+      "order": 2,
+      "line": 122,
+      "callee": "stressor_dict",
+      "full_callee": "stressor_dict",
+      "outputs": [
+        "s_map"
+      ],
+      "args": [
+        "self.spec",
+        "stressor_vec"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 3: Update S(t)"
+    },
+    {
+      "order": 3,
+      "line": 125,
+      "callee": "deform_all",
+      "full_callee": "deform_all",
+      "outputs": [
+        "deformed"
+      ],
+      "args": [
+        "self.spec",
+        "stressor_vec"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 4: Deform legality graph"
+    },
+    {
+      "order": 4,
+      "line": 126,
+      "callee": "legality_summary",
+      "full_callee": "legality_summary",
+      "outputs": [
+        "leg_summary"
+      ],
+      "args": [
+        "deformed"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 4: Deform legality graph"
+    },
+    {
+      "order": 5,
+      "line": 131,
+      "callee": "constraint_state_dict",
+      "full_callee": "constraint_state_dict",
+      "outputs": [
+        "c_dict"
+      ],
+      "args": [
+        "c_state"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 5: Update constraint state C(t)"
+    },
+    {
+      "order": 6,
+      "line": 134,
+      "callee": "compute_all_penalties",
+      "full_callee": "compute_all_penalties",
+      "outputs": [
+        "penalties"
+      ],
+      "args": [
+        "self.spec",
+        "stressor_vec",
+        "c_state"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 6: Compute P_r(t) and gradients"
+    },
+    {
+      "order": 7,
+      "line": 135,
+      "callee": "compute_gradients",
+      "full_callee": "compute_gradients",
+      "outputs": [
+        "gradients"
+      ],
+      "args": [
+        "penalties",
+        "self.penalty_history"
+      ],
+      "kwargs": {
+        "window": "self.spec.gradient_window"
+      },
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 6: Compute P_r(t) and gradients"
+    },
+    {
+      "order": 8,
+      "line": 140,
+      "callee": "select_active_regime",
+      "full_callee": "select_active_regime",
+      "outputs": [
+        "active_regime"
+      ],
+      "args": [
+        "gradients"
+      ],
+      "kwargs": {
+        "current_regime": "self.prev_regime",
+        "inertia": "self.spec.regime_inertia"
+      },
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 7: Select active regime"
+    },
+    {
+      "order": 9,
+      "line": 148,
+      "callee": "regime_switch_trace",
+      "full_callee": "regime_switch_trace",
+      "outputs": [
+        "switch_decision"
+      ],
+      "args": [
+        "gradients",
+        "self.prev_regime",
+        "active_regime",
+        "self.spec.regime_inertia"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Regime switch decision trace"
+    },
+    {
+      "order": 10,
+      "line": 153,
+      "callee": "generate_all_proposals",
+      "full_callee": "generate_all_proposals",
+      "outputs": [
+        "all_proposals"
+      ],
+      "args": [
+        "t",
+        "s_map",
+        "self.rng",
+        "self.prev_regret"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 8: Generate proposals from all specialists"
+    },
+    {
+      "order": 11,
+      "line": 158,
+      "callee": "apply_overlays",
+      "full_callee": "apply_overlays",
+      "outputs": [
+        "(filtered_proposals, veto_events)"
+      ],
+      "args": [
+        "self.spec.overlays",
+        "s_map",
+        "all_proposals"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 9: Filter by overlay vetoes"
+    },
+    {
+      "order": 12,
+      "line": 161,
+      "callee": "to_dict",
+      "full_callee": "v.to_dict",
+      "outputs": [
+        "veto_event_dicts"
+      ],
+      "args": [],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 9: Filter by overlay vetoes"
+    },
+    {
+      "order": 13,
+      "line": 166,
+      "callee": "get",
+      "full_callee": "all_proposals.get",
+      "outputs": [
+        "orig_ids"
+      ],
+      "args": [
+        "phase",
+        "[]"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in CANONICAL_PHASES",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 14,
+      "line": 167,
+      "callee": "get",
+      "full_callee": "filtered_proposals.get",
+      "outputs": [
+        "kept_ids"
+      ],
+      "args": [
+        "phase",
+        "[]"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in CANONICAL_PHASES",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 15,
+      "line": 170,
+      "callee": "append",
+      "full_callee": "filtered_out.append",
+      "outputs": [],
+      "args": [
+        "{'id': pid, 'phase': phase, 'reason': 'overlay_veto'}"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in CANONICAL_PHASES > for pid in sorted(removed_ids)",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 16,
+      "line": 177,
+      "callee": "canonical_path_admissible",
+      "full_callee": "canonical_path_admissible",
+      "outputs": [
+        "governance_disallow"
+      ],
+      "args": [
+        "deformed"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 17,
+      "line": 180,
+      "callee": "check_bypass_eligibility",
+      "full_callee": "check_bypass_eligibility",
+      "outputs": [
+        "bypass_eligibilities"
+      ],
+      "args": [
+        "self.spec.bypasses",
+        "active_regime",
+        "s_map",
+        "deformed"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 10: Evaluate bypass eligibility"
+    },
+    {
+      "order": 18,
+      "line": 186,
+      "callee": "select_bypass",
+      "full_callee": "select_bypass",
+      "outputs": [
+        "selected_bp"
+      ],
+      "args": [
+        "bypass_eligibilities"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 10b: Select bypass if eligible"
+    },
+    {
+      "order": 19,
+      "line": 189,
+      "callee": "determine_execution_path",
+      "full_callee": "determine_execution_path",
+      "outputs": [
+        "(execution_path, bypass_event)"
+      ],
+      "args": [
+        "self.spec.bypasses",
+        "selected_bp"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 11: Determine execution path"
+    },
+    {
+      "order": 20,
+      "line": 204,
+      "callee": "add",
+      "full_callee": "seen_phases.add",
+      "outputs": [],
+      "args": [
+        "p"
+      ],
+      "kwargs": {},
+      "inside_loop": "for p in execution_path",
+      "inside_if": "p not in seen_phases",
+      "step_label": null
+    },
+    {
+      "order": 21,
+      "line": 205,
+      "callee": "append",
+      "full_callee": "unique_path.append",
+      "outputs": [],
+      "args": [
+        "p"
+      ],
+      "kwargs": {},
+      "inside_loop": "for p in execution_path",
+      "inside_if": "p not in seen_phases",
+      "step_label": null
+    },
+    {
+      "order": 22,
+      "line": 208,
+      "callee": "get",
+      "full_callee": "filtered_proposals.get",
+      "outputs": [
+        "phase_proposals"
+      ],
+      "args": [
+        "phase",
+        "[]"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in unique_path",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 23,
+      "line": 209,
+      "callee": "select_best_proposal",
+      "full_callee": "select_best_proposal",
+      "outputs": [
+        "best"
+      ],
+      "args": [
+        "phase_proposals",
+        "active_regime"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in unique_path",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 24,
+      "line": 219,
+      "callee": "score_proposal_for_regime",
+      "full_callee": "score_proposal_for_regime",
+      "outputs": [
+        "executed_value"
+      ],
+      "args": [
+        "best",
+        "active_regime"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in unique_path",
+      "inside_if": "best > phase == 'execute'",
+      "step_label": null
+    },
+    {
+      "order": 25,
+      "line": 228,
+      "callee": "get",
+      "full_callee": "filtered_proposals.get",
+      "outputs": [
+        "terminal_proposals"
+      ],
+      "args": [
+        "terminal_phase",
+        "[]"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": "'execute' not in execution_path",
+      "step_label": null
+    },
+    {
+      "order": 26,
+      "line": 229,
+      "callee": "select_best_proposal",
+      "full_callee": "select_best_proposal",
+      "outputs": [
+        "terminal_best"
+      ],
+      "args": [
+        "terminal_proposals",
+        "active_regime"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": "'execute' not in execution_path",
+      "step_label": null
+    },
+    {
+      "order": 27,
+      "line": 231,
+      "callee": "score_proposal_for_regime",
+      "full_callee": "score_proposal_for_regime",
+      "outputs": [
+        "executed_value"
+      ],
+      "args": [
+        "terminal_best",
+        "active_regime"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": "'execute' not in execution_path > terminal_best",
+      "step_label": null
+    },
+    {
+      "order": 28,
+      "line": 239,
+      "callee": "get",
+      "full_callee": "all_proposals.get",
+      "outputs": [
+        "skipped_props"
+      ],
+      "args": [
+        "phase",
+        "[]"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in skipped_phases",
+      "inside_if": null,
+      "step_label": "Archive counterfactuals"
+    },
+    {
+      "order": 29,
+      "line": 240,
+      "callee": "archive_proposals",
+      "full_callee": "self.doctrine.archive_proposals",
+      "outputs": [
+        "entries"
+      ],
+      "args": [
+        "skipped_props",
+        "'bypassed'",
+        "t",
+        "active_regime"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in skipped_phases",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 30,
+      "line": 243,
+      "callee": "extend",
+      "full_callee": "cycle_counterfactuals.extend",
+      "outputs": [],
+      "args": [
+        "(e.to_dict() for e in entries)"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in skipped_phases",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 31,
+      "line": 247,
+      "callee": "get",
+      "full_callee": "filtered_proposals.get",
+      "outputs": [
+        "phase_proposals"
+      ],
+      "args": [
+        "phase",
+        "[]"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in execution_path",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 32,
+      "line": 248,
+      "callee": "get",
+      "full_callee": "selected_proposals.get",
+      "outputs": [
+        "selected_id"
+      ],
+      "args": [
+        "phase"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in execution_path",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 33,
+      "line": 250,
+      "callee": "archive_proposals",
+      "full_callee": "self.doctrine.archive_proposals",
+      "outputs": [
+        "entries"
+      ],
+      "args": [
+        "not_selected",
+        "'not_selected'",
+        "t",
+        "active_regime"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in execution_path",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 34,
+      "line": 253,
+      "callee": "extend",
+      "full_callee": "cycle_counterfactuals.extend",
+      "outputs": [],
+      "args": [
+        "(e.to_dict() for e in entries)"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in execution_path",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 35,
+      "line": 257,
+      "callee": "get",
+      "full_callee": "all_proposals.get",
+      "outputs": [
+        "orig"
+      ],
+      "args": [
+        "phase",
+        "[]"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in CANONICAL_PHASES",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 36,
+      "line": 258,
+      "callee": "get",
+      "full_callee": "filtered_proposals.get",
+      "outputs": [
+        "kept_ids"
+      ],
+      "args": [
+        "phase",
+        "[]"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in CANONICAL_PHASES",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 37,
+      "line": 260,
+      "callee": "archive_proposals",
+      "full_callee": "self.doctrine.archive_proposals",
+      "outputs": [
+        "entries"
+      ],
+      "args": [
+        "vetoed",
+        "'vetoed'",
+        "t",
+        "active_regime"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in CANONICAL_PHASES",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 38,
+      "line": 263,
+      "callee": "extend",
+      "full_callee": "cycle_counterfactuals.extend",
+      "outputs": [],
+      "args": [
+        "(e.to_dict() for e in entries)"
+      ],
+      "kwargs": {},
+      "inside_loop": "for phase in CANONICAL_PHASES",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 39,
+      "line": 266,
+      "callee": "compute_regret",
+      "full_callee": "self.doctrine.compute_regret",
+      "outputs": [
+        "regret"
+      ],
+      "args": [
+        "executed_value",
+        "t",
+        "active_regime"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step: Compute regret"
+    },
+    {
+      "order": 40,
+      "line": 269,
+      "callee": "generate_doctrine_candidates",
+      "full_callee": "self.doctrine.generate_doctrine_candidates",
+      "outputs": [
+        "doctrine_candidates"
+      ],
+      "args": [],
+      "kwargs": {
+        "cycle": "t",
+        "regret": "regret",
+        "active_regime": "active_regime",
+        "bypass_activated": "bypass_event is not None",
+        "veto_events": "veto_event_dicts",
+        "governance_disallow": "governance_disallow",
+        "regime_switch_decision": "switch_decision"
+      },
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step: Doctrine candidates"
+    },
+    {
+      "order": 41,
+      "line": 281,
+      "callee": "candidate_to_record",
+      "full_callee": "candidate_to_record",
+      "outputs": [
+        "record"
+      ],
+      "args": [
+        "dc",
+        "active_regime"
+      ],
+      "kwargs": {},
+      "inside_loop": "for dc in doctrine_candidates",
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 42,
+      "line": 283,
+      "callee": "append",
+      "full_callee": "self._doctrine_records.append",
+      "outputs": [],
+      "args": [
+        "record"
+      ],
+      "kwargs": {},
+      "inside_loop": "for dc in doctrine_candidates",
+      "inside_if": "record is not None",
+      "step_label": null
+    },
+    {
+      "order": 43,
+      "line": 289,
+      "callee": "any_identity_veto",
+      "full_callee": "any_identity_veto",
+      "outputs": [
+        "(identity_veto)"
+      ],
+      "args": [
+        "veto_events"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Update state for next cycle"
+    },
+    {
+      "order": 44,
+      "line": 290,
+      "callee": "any_coalition_veto",
+      "full_callee": "any_coalition_veto",
+      "outputs": [
+        "(coalition_veto)"
+      ],
+      "args": [
+        "veto_events"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Update state for next cycle"
+    },
+    {
+      "order": 45,
+      "line": 291,
+      "callee": "coalition_drag_level",
+      "full_callee": "coalition_drag_level",
+      "outputs": [
+        "(coalition_drag)"
+      ],
+      "args": [
+        "veto_events"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Update state for next cycle"
+    },
+    {
+      "order": 46,
+      "line": 286,
+      "callee": "update_constraint_state",
+      "full_callee": "update_constraint_state",
+      "outputs": [
+        "self.constraint_state"
+      ],
+      "args": [],
+      "kwargs": {
+        "prev": "c_state",
+        "governance_disallow": "governance_disallow",
+        "identity_veto": "any_identity_veto(veto_events)",
+        "coalition_veto": "any_coalition_veto(veto_events)",
+        "coalition_drag": "coalition_drag_level(veto_events)",
+        "bypass_activated": "bypass_event is not None",
+        "regime_changed": "regime_changed"
+      },
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Update state for next cycle"
+    },
+    {
+      "order": 47,
+      "line": 295,
+      "callee": "append",
+      "full_callee": "self.penalty_history.append",
+      "outputs": [],
+      "args": [
+        "penalties"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 48,
+      "line": 308,
+      "callee": "hash_state",
+      "full_callee": "hash_state",
+      "outputs": [
+        "s_hash"
+      ],
+      "args": [
+        "state_for_hash"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": null
+    },
+    {
+      "order": 49,
+      "line": 311,
+      "callee": "CycleTrace",
+      "full_callee": "CycleTrace",
+      "outputs": [
+        "trace"
+      ],
+      "args": [],
+      "kwargs": {
+        "cycle": "t",
+        "seed": "self.spec.seed",
+        "stressor_vector": "{k: round(v, 6) for k, v in s_map.items()}",
+        "constraint_state": "c_dict",
+        "legality_summary": "leg_summary",
+        "regime_penalties": "penalties",
+        "regime_gradients": "gradients",
+        "active_regime": "active_regime",
+        "regime_switch_decision": "switch_decision",
+        "proposals": "{phase: [{'id': p['id'], 'specialist': p['specialist'], 'description': p['description'], 'scores': p['scores']} for p in props] for phase, props in all_proposals.items()}",
+        "filtered_proposals": "filtered_out",
+        "overlay_veto_events": "veto_event_dicts",
+        "bypass_eligible": "bypass_eligible_map",
+        "bypass_activated": "bypass_event.to_dict() if bypass_event else None",
+        "execution_path": "execution_path",
+        "selected_proposals": "selected_proposals",
+        "selected_action": "selected_action",
+        "counterfactual_archive": "cycle_counterfactuals",
+        "regret_score": "regret",
+        "doctrine_candidates": "[dc.to_dict() for dc in doctrine_candidates]",
+        "termination_reason": "'completed' if is_final else None",
+        "state_hash": "s_hash"
+      },
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": "Step 13: Log trace"
+    },
+    {
+      "order": 50,
+      "line": 342,
+      "callee": "append",
+      "full_callee": "self.trace_writer.append",
+      "outputs": [],
+      "args": [
+        "trace"
+      ],
+      "kwargs": {},
+      "inside_loop": null,
+      "inside_if": null,
+      "step_label": null
+    }
+  ],
+  "branches": [
+    {
+      "line": 203,
+      "condition": "p not in seen_phases",
+      "call_count": 2
+    },
+    {
+      "line": 210,
+      "condition": "best",
+      "call_count": 0
+    },
+    {
+      "line": 212,
+      "condition": "phase == 'execute'",
+      "call_count": 1
+    },
+    {
+      "line": 221,
+      "condition": "else (not best)",
+      "call_count": 0
+    },
+    {
+      "line": 224,
+      "condition": "'execute' not in execution_path",
+      "call_count": 2
+    },
+    {
+      "line": 230,
+      "condition": "terminal_best",
+      "call_count": 1
+    },
+    {
+      "line": 282,
+      "condition": "record is not None",
+      "call_count": 1
+    }
+  ],
+  "loops": [
+    {
+      "line": 165,
+      "target": "phase",
+      "iterable": "CANONICAL_PHASES",
+      "call_count": 2
+    },
+    {
+      "line": 169,
+      "target": "pid",
+      "iterable": "sorted(removed_ids)",
+      "call_count": 1
+    },
+    {
+      "line": 202,
+      "target": "p",
+      "iterable": "execution_path",
+      "call_count": 2
+    },
+    {
+      "line": 207,
+      "target": "phase",
+      "iterable": "unique_path",
+      "call_count": 3
+    },
+    {
+      "line": 238,
+      "target": "phase",
+      "iterable": "skipped_phases",
+      "call_count": 3
+    },
+    {
+      "line": 246,
+      "target": "phase",
+      "iterable": "execution_path",
+      "call_count": 4
+    },
+    {
+      "line": 256,
+      "target": "phase",
+      "iterable": "CANONICAL_PHASES",
+      "call_count": 4
+    },
+    {
+      "line": 280,
+      "target": "dc",
+      "iterable": "doctrine_candidates",
+      "call_count": 2
+    }
+  ]
+}

@@ -1,0 +1,220 @@
+%%{ init: {'theme': 'base', 'themeVariables': {'primaryColor': '#E8F4FD', 'primaryTextColor': '#2D3436', 'primaryBorderColor': '#0984E3', 'lineColor': '#636E72', 'secondaryColor': '#F0FAF0', 'tertiaryColor': '#FFF5F5'}} }%%
+flowchart TD
+    %% Auto-generated from _execute_cycle() in runtime.py
+    %% Lines 117-342 | 50 steps
+
+    s1[["Step 3: Update S(t) stressor_vec = compute_stressor_vector()  :L121"]]
+    s2[["Step 3: Update S(t) s_map = stressor_dict()  :L122"]]
+    s3[["Step 4: Deform legality graph deformed = deform_all()  :L125"]]
+    s4[["Step 4: Deform legality graph leg_summary = legality_summary()  :L126"]]
+    s5[["Step 5: Update constraint state C(t) c_dict = constraint_state_dict()  :L131"]]
+    s6[["Step 6: Compute P_r(t) and gradients penalties = compute_all_penalties()  :L134"]]
+    s7[["Step 6: Compute P_r(t) and gradients gradients = compute_gradients()  :L135"]]
+    s8[["Step 7: Select active regime active_regime = select_active_regime()  :L140"]]
+    s9[["Regime switch decision trace switch_decision = regime_switch_trace()  :L148"]]
+    s10[["Step 8: Generate proposals from all specialists all_proposals = generate_all_proposals()  :L153"]]
+    s11[["Step 9: Filter by overlay vetoes (filtered_proposals, veto_events) = apply_overlays()  :L158"]]
+    s12[["Step 9: Filter by overlay vetoes veto_event_dicts = to_dict()  :L161"]]
+    s16[["governance_disallow = canonical_path_admissible()  :L177"]]
+    s17[["Step 10: Evaluate bypass eligibility bypass_eligibilities = check_bypass_eligibility()  :L180"]]
+    s18[["Step 10b: Select bypass if eligible selected_bp = select_bypass()  :L186"]]
+    s19[["Step 11: Determine execution path (execution_path, bypass_event) = determine_execution_path()  :L189"]]
+    s39[["Step: Compute regret regret = compute_regret()  :L266"]]
+    s40[["Step: Doctrine candidates doctrine_candidates = generate_doctrine_candidates()  :L269"]]
+    s43[["Update state for next cycle (identity_veto) = any_identity_veto()  :L289"]]
+    s44[["Update state for next cycle (coalition_veto) = any_coalition_veto()  :L290"]]
+    s45[["Update state for next cycle (coalition_drag) = coalition_drag_level()  :L291"]]
+    s46[["Update state for next cycle self.constraint_state = update_constraint_state()  :L286"]]
+    s47[["append()  :L295"]]
+    s48[["s_hash = hash_state()  :L308"]]
+    s49[["Step 13: Log trace trace = CycleTrace()  :L311"]]
+    s50[["append()  :L342"]]
+
+    subgraph loop0["LOOP: for phase in CANONICAL_PHASES"]
+        direction TB
+        s13[["orig_ids = get()  :L166"]]
+        s14[["kept_ids = get()  :L167"]]
+        s35[["orig = get()  :L257"]]
+        s36[["kept_ids = get()  :L258"]]
+        s37[["entries = archive_proposals()  :L260"]]
+        s38[["extend()  :L263"]]
+    end
+
+    subgraph loop1["LOOP: for phase in CANONICAL_PHASES > for pid in sorted(removed..."]
+        direction TB
+        s15[["append()  :L170"]]
+    end
+
+    subgraph loop2["LOOP: for p in execution_path"]
+        direction TB
+        s20[["add()  :L204"]]
+        s21[["append()  :L205"]]
+    end
+
+    subgraph loop3["LOOP: for phase in unique_path"]
+        direction TB
+        s22[["phase_proposals = get()  :L208"]]
+        s23[["best = select_best_proposal()  :L209"]]
+        s24[["executed_value = score_proposal_for_regime()  :L219"]]
+    end
+
+    subgraph loop4["LOOP: for phase in skipped_phases"]
+        direction TB
+        s28[["Archive counterfactuals skipped_props = get()  :L239"]]
+        s29[["entries = archive_proposals()  :L240"]]
+        s30[["extend()  :L243"]]
+    end
+
+    subgraph loop5["LOOP: for phase in execution_path"]
+        direction TB
+        s31[["phase_proposals = get()  :L247"]]
+        s32[["selected_id = get()  :L248"]]
+        s33[["entries = archive_proposals()  :L250"]]
+        s34[["extend()  :L253"]]
+    end
+
+    subgraph loop6["LOOP: for dc in doctrine_candidates"]
+        direction TB
+        s41[["record = candidate_to_record()  :L281"]]
+        s42[["append()  :L283"]]
+    end
+
+    subgraph if0["IF: 'execute' not in execution_path"]
+        direction TB
+        s25[["terminal_proposals = get()  :L228"]]
+        s26[["terminal_best = select_best_proposal()  :L229"]]
+    end
+
+    subgraph if1["IF: 'execute' not in execution_path > terminal_best"]
+        direction TB
+        s27[["executed_value = score_proposal_for_regime()  :L231"]]
+    end
+
+    %% Dependencies
+    s1 --> s2
+    s1 --> s3
+    s1 --> s6
+    s2 --> s10
+    s2 --> s11
+    s2 --> s17
+    s2 --> s49
+    s3 --> s4
+    s3 --> s16
+    s3 --> s17
+    s4 --> s5
+    s4 --> s49
+    s5 --> s49
+    s6 --> s7
+    s6 --> s47
+    s6 --> s49
+    s7 --> s8
+    s7 --> s9
+    s7 --> s49
+    s8 --> s9
+    s8 --> s17
+    s8 --> s23
+    s8 --> s24
+    s8 --> s26
+    s8 --> s27
+    s8 --> s29
+    s8 --> s33
+    s8 --> s37
+    s8 --> s39
+    s8 --> s40
+    s8 --> s41
+    s8 --> s49
+    s9 --> s40
+    s9 --> s49
+    s10 --> s11
+    s10 --> s49
+    s11 --> s12
+    s11 --> s46
+    s12 --> s13
+    s12 --> s40
+    s12 --> s49
+    s13 --> s14
+    s14 --> s15
+    s16 --> s40
+    s16 --> s46
+    s17 --> s18
+    s18 --> s19
+    s19 --> s20
+    s20 --> s21
+    s21 --> s22
+    s23 --> s24
+    s23 --> s27
+    s24 --> s25
+    s25 --> s26
+    s26 --> s27
+    s27 --> s28
+    s27 --> s39
+    s28 --> s29
+    s29 --> s30
+    s30 --> s31
+    s31 --> s32
+    s33 --> s34
+    s34 --> s35
+    s35 --> s36
+    s37 --> s38
+    s39 --> s40
+    s39 --> s49
+    s40 --> s49
+    s41 --> s42
+    s42 --> s43
+    s43 --> s44
+    s44 --> s45
+    s47 --> s48
+    s48 --> s49
+    s49 --> s50
+
+    %% Styles
+    style s1 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s2 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s3 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s4 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s5 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s6 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s7 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s8 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s9 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s10 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s11 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s12 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s13 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s14 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s15 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s16 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s17 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s18 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s19 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s20 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s21 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s22 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s23 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s24 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s25 fill:#FFF5F5,stroke:#D63031,stroke-width:1px
+    style s26 fill:#FFF5F5,stroke:#D63031,stroke-width:1px
+    style s27 fill:#FFF5F5,stroke:#D63031,stroke-width:1px
+    style s28 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s29 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s30 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s31 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s32 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s33 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s34 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s35 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s36 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s37 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s38 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s39 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s40 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s41 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s42 fill:#FFF3E0,stroke:#E17055,stroke-width:1px
+    style s43 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s44 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s45 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s46 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s47 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s48 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s49 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px
+    style s50 fill:#E8F4FD,stroke:#0984E3,stroke-width:2px

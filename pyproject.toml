@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "code-organism"
+version = "0.1.0"
+description = "3D code visualization - see the soul of software"
+requires-python = ">=3.10"
+
+[project.scripts]
+code-organism = "Code_Organism.cli:main"
+
+[tool.setuptools.packages.find]
+where = [".."]
+include = ["Code_Organism*"]
