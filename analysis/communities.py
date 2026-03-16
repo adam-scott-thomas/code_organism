@@ -255,6 +255,48 @@ def _merge_small_communities(
 # Helpers
 # ======================================================================
 
+# Stop words filtered out during keyword / label extraction
+_STOP_WORDS = frozenset({
+    # Articles / prepositions / conjunctions
+    "the", "a", "an", "of", "to", "for", "in", "on", "at", "by",
+    "and", "or", "not", "with", "from", "into",
+    # Python keywords / builtins that appear as name fragments
+    "def", "class", "self", "cls", "args", "kwargs", "none", "true", "false",
+    "type", "str", "int", "list", "dict", "bool", "float", "any", "all",
+    # Very common verb prefixes in code names
+    "test", "tests", "get", "set", "is", "has", "are", "was", "do", "does",
+    "init", "main", "return", "returns", "run", "runs", "add", "del", "pop",
+    "put", "try", "end", "use", "call", "finds", "find", "make", "takes",
+    # Generic nouns that don't add meaning
+    "result", "results", "data", "value", "values", "item", "items",
+    "node", "nodes", "new", "old", "obj", "func", "attr", "var", "param",
+    "key", "val", "tmp", "temp", "err", "error", "num", "idx", "max", "min",
+    "len", "map", "name", "file", "path", "info", "config", "option",
+    "input", "output", "arg", "ret", "res", "src", "dst", "buf",
+    # Test-specific terms
+    "empty", "valid", "invalid", "should", "when", "then", "given",
+    "mock", "stub", "fake", "fixture", "assert", "expect", "check",
+    "default", "post", "pre",
+})
+
+
+def _split_name(name: str) -> list[str]:
+    """Split camelCase and snake_case names into individual terms.
+
+    Examples:
+        "parseAST"     -> ["parse", "AST"]
+        "snake_case"   -> ["snake", "case"]
+        "FileProcessor" -> ["File", "Processor"]
+    """
+    import re
+    # Insert space before uppercase runs: camelCase -> camel Case
+    spaced = re.sub(r'([a-z])([A-Z])', r'\1 \2', name)
+    # Also split runs of uppercase before a lowercase: XMLParser -> XML Parser
+    spaced = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', spaced)
+    # Split on underscore and space
+    return [t for t in re.split(r'[_\s]+', spaced) if t]
+
+
 def _build_community_dict(
     community_idx: int,
     member_ids: list[str],
@@ -268,15 +310,15 @@ def _build_community_dict(
     possible = n * (n - 1) // 2 if n >= 2 else 1
     cohesion = min(1.0, internal_edges / possible) if possible > 0 else 0.0
 
-    # Collect member names for naming / keywords
-    names: list[str] = []
+    # Collect member nodes for naming / keywords
+    member_nodes: list = []
     for nid in member_ids:
         node = organism.nodes.get(nid)
         if node:
-            names.append(node.name)
+            member_nodes.append(node)
 
-    keywords = _extract_keywords(names)
-    name = _generate_community_name(names, community_idx)
+    keywords = _extract_keywords(member_nodes)
+    name = _generate_community_name(member_nodes, community_idx)
 
     return {
         "id": f"community_{community_idx}",
@@ -287,56 +329,175 @@ def _build_community_dict(
     }
 
 
-def _extract_keywords(names: list[str], max_keywords: int = 5) -> list[str]:
-    """Extract representative keywords from member names.
+def _extract_keywords(nodes: list, max_keywords: int = 5) -> list[str]:
+    """Extract representative keywords from community member nodes.
 
     Splits camelCase and snake_case names into tokens, counts
-    frequency, and returns the top tokens.
+    frequency across all members, filters stop words, and returns
+    the top tokens.
     """
-    import re
-
     token_counts: Counter[str] = Counter()
-    for name in names:
-        # Split snake_case
-        parts = name.split("_")
-        for part in parts:
-            # Split camelCase
-            sub_parts = re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)", part)
-            if sub_parts:
-                for sp in sub_parts:
-                    token = sp.lower()
-                    if len(token) > 1:  # skip single-char tokens
-                        token_counts[token] += 1
-            elif len(part) > 1:
-                token_counts[part.lower()] += 1
-
-    # Filter out very common / generic tokens
-    generic = {"self", "init", "get", "set", "the", "and", "for", "def", "class"}
-    for g in generic:
-        token_counts.pop(g, None)
+    for node in nodes:
+        terms = _split_name(node.name)
+        for t in terms:
+            tok = t.lower()
+            if len(tok) > 1 and tok not in _STOP_WORDS:
+                token_counts[tok] += 1
 
     return [tok for tok, _ in token_counts.most_common(max_keywords)]
 
 
-def _generate_community_name(names: list[str], idx: int) -> str:
-    """Generate a descriptive name for a community.
+def _common_path_label(nodes: list) -> str | None:
+    """Try to derive a community label from shared file paths.
 
-    Uses the most distinctive member name as the basis, falling back
-    to a numeric identifier.
+    If all (or most) members share a common module/directory prefix
+    in their qualified_name, return a human-readable title from it.
+    Returns None if no useful commonality is found.
     """
-    if not names:
-        return f"Community {idx}"
+    # Gather qualified-name path prefixes (everything before the last component)
+    # e.g. "analysis.communities.detect_communities" -> "analysis.communities"
+    path_parts_list: list[list[str]] = []
+    for node in nodes:
+        if not node.qualified_name:
+            continue
+        parts = node.qualified_name.split(".")
+        if len(parts) >= 2:
+            # Use all parts except the last (the symbol itself)
+            path_parts_list.append(parts[:-1])
 
-    # Prefer class or module names (tend to be more descriptive)
-    # Filter out dunder names
-    candidates = [n for n in names if not n.startswith("__")]
-    if not candidates:
-        candidates = names
+    if not path_parts_list:
+        return None
 
-    # Pick the longest name as most descriptive
-    candidates.sort(key=len, reverse=True)
-    base = candidates[0]
+    # Find common prefix across all paths
+    if len(path_parts_list) == 1:
+        common = path_parts_list[0]
+    else:
+        common = list(path_parts_list[0])
+        for parts in path_parts_list[1:]:
+            new_common = []
+            for a, b in zip(common, parts):
+                if a == b:
+                    new_common.append(a)
+                else:
+                    break
+            common = new_common
 
-    if len(names) == 1:
-        return base
-    return f"{base} group"
+    if not common:
+        # No shared prefix across all members. Check if a majority share one.
+        # Count the first path component frequency.
+        first_component: Counter[str] = Counter()
+        for parts in path_parts_list:
+            first_component[parts[0]] += 1
+        most_common_dir, count = first_component.most_common(1)[0]
+        if count >= len(nodes) * 0.5:
+            common = [most_common_dir]
+        else:
+            return None
+
+    # Convert path components to a readable label
+    # e.g. ["analysis", "communities"] -> "Analysis Communities"
+    # But skip very generic single-char or short components
+    label_parts = []
+    for part in common:
+        # Expand underscores and camelCase
+        terms = _split_name(part)
+        for t in terms:
+            if t.lower() not in _STOP_WORDS and len(t) > 1:
+                label_parts.append(t.title())
+
+    if not label_parts:
+        return None
+
+    # Cap at 3 words
+    label = " ".join(label_parts[:3])
+    return label if label else None
+
+
+def _common_terms_label(nodes: list) -> str | None:
+    """Try to derive a community label from common terms in member names.
+
+    Splits all member names, counts term frequency, and picks terms
+    that appear in >30% of members. Returns a 2-3 word title or None.
+    """
+    if not nodes:
+        return None
+
+    all_terms: list[str] = []
+    # Track which terms appear in each node (for threshold calculation)
+    node_term_sets: list[set[str]] = []
+
+    for node in nodes:
+        terms = _split_name(node.name)
+        node_terms: set[str] = set()
+        for t in terms:
+            tok = t.lower()
+            if len(tok) > 2 and tok not in _STOP_WORDS:
+                all_terms.append(tok)
+                node_terms.add(tok)
+        node_term_sets.append(node_terms)
+
+    if not all_terms:
+        return None
+
+    # Count how many nodes each term appears in
+    term_node_count: Counter[str] = Counter()
+    for term_set in node_term_sets:
+        for t in term_set:
+            term_node_count[t] += 1
+
+    # Threshold: term must appear in at least 30% of members (min 2)
+    threshold = max(2, int(len(nodes) * 0.3))
+    common = [
+        term for term, count in term_node_count.most_common(5)
+        if count >= threshold
+    ]
+
+    if common:
+        return " ".join(t.title() for t in common[:3])
+
+    return None
+
+
+def _generate_community_name(nodes: list, idx: int) -> str:
+    """Generate a concise, descriptive name for a community.
+
+    Naming strategy (in priority order):
+      1. File-path commonality — if members share a module/directory,
+         use that (e.g. "Parser", "Health Analysis").
+      2. Common term extraction — frequent meaningful terms across
+         member names (e.g. "Validate Format").
+      3. Single-node shortcut — if the community is a lone class or
+         module, use its name directly.
+      4. Fallback — "Group N".
+    """
+    if not nodes:
+        return f"Group {idx}"
+
+    # Strategy 1: File-path based naming
+    label = _common_path_label(nodes)
+    if label:
+        return label
+
+    # Strategy 2: Common terms from member names
+    label = _common_terms_label(nodes)
+    if label:
+        return label
+
+    # Strategy 3: If there's exactly one node, use its name
+    if len(nodes) == 1:
+        return nodes[0].name
+
+    # Strategy 3b: If there's a single class or module, prefer its name
+    from ..model.nodes import NodeType as _NT
+    classes = [n for n in nodes if n.node_type == _NT.CLASS]
+    modules = [n for n in nodes if n.node_type == _NT.MODULE]
+    if len(classes) == 1:
+        return classes[0].name
+    if len(modules) == 1:
+        terms = _split_name(modules[0].name)
+        readable = [t.title() for t in terms if t.lower() not in _STOP_WORDS and len(t) > 1]
+        if readable:
+            return " ".join(readable[:3])
+
+    # Strategy 4: Fallback
+    return f"Group {idx}"
