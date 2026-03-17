@@ -55,16 +55,23 @@ class SolarSystemRenderer:
         self._id_to_path = {}  # unique ID -> path
         self._id_counter = 0
 
-        # Group all nodes by their directory path
+        # Only include structural nodes with valid file positions
         for node_id, node in self.organism.nodes.items():
+            # Skip non-structural nodes (variables, parameters, externals, builtins)
+            if hasattr(node, 'node_type') and node.node_type.value not in (
+                'module', 'class', 'function', 'method', 'package'
+            ):
+                continue
+
             position = getattr(node, 'position', None)
-            if position:
-                pos_str = str(position)
-                file_path = pos_str.split(':')[0] if ':' in pos_str else pos_str
-                file_path = file_path.replace('\\', '/')
+            if position and hasattr(position, 'file') and position.file:
+                file_path = str(position.file).replace('\\', '/')
+            elif hasattr(node, 'qualified_name') and '.' in node.qualified_name:
+                # Only use qualified_name if it looks like a real dotted path
+                file_path = node.qualified_name.replace('.', '/')
             else:
-                # Fallback: use qualified name
-                file_path = node.qualified_name.replace('.', '/') if hasattr(node, 'qualified_name') else node.name
+                # Skip nodes without a valid file path
+                continue
 
             # Split into directory parts
             parts = file_path.split('/')
@@ -126,56 +133,64 @@ class SolarSystemRenderer:
             info['children'] = list(info['children'])
             info['files'] = list(info['files'])
 
-        # Find root directories - ONLY keep actual project folders
-        # Filter out import artifacts by checking if root name is a known project
-        # or has multiple levels of real directory structure
-        all_roots = [
-            path for path, info in self._directory_tree.items()
-            if info['parent'] is None and not info.get('is_file')
-        ]
+        # Find a sensible root level. When paths are absolute (D:/foo/bar/...),
+        # we want to find the common prefix and use the first level below it as roots.
+        all_paths = list(self._directory_tree.keys())
+        if not all_paths:
+            self._roots = []
+            return
 
-        # Known project names (from the GL directory)
-        known_projects = {
-            'black_box_complete', 'blackbox', 'inspector_complete', 'inspector',
-            'code_organism', 'exhibittea', 'exhibit_tea', 'canary', 'arbitrator',
-            'temp_install', 'extracted_capsule', 'benchmark', 'demo'
-        }
+        # Find the longest common prefix among all directory paths
+        # (strip the path down to the project root)
+        dir_paths = [p for p, info in self._directory_tree.items() if not info.get('is_file')]
+        if dir_paths:
+            prefix_parts = dir_paths[0].split('/')
+            for dp in dir_paths[1:]:
+                other_parts = dp.split('/')
+                common_len = 0
+                for a, b in zip(prefix_parts, other_parts):
+                    if a == b:
+                        common_len += 1
+                    else:
+                        break
+                prefix_parts = prefix_parts[:common_len]
+            common_prefix = '/'.join(prefix_parts)
+        else:
+            common_prefix = ''
 
-        # Common false positives from Python code patterns
-        false_positives = {
-            'self', 'cls', 'super', 'line', 'result', 'data', 'path', 'text',
-            'errors', 'error', 'value', 'key', 'item', 'items', 'name', 'node',
-            'args', 'kwargs', 'config', 'settings', 'options', 'params',
-            'response', 'request', 'context', 'state', 'event', 'message',
-            'file', 'files', 'output', 'input', 'source', 'target', 'cext',
-            'core_schema', 'entry', 'key_ring', 'ingestor', 'sealer'
-        }
-
+        # The roots are direct children of the common prefix
         self._roots = []
-        for root in all_roots:
-            info = self._directory_tree[root]
-            name = info['name'].lower()
-
-            # Skip false positives
-            if name in false_positives:
+        for path, info in self._directory_tree.items():
+            if info.get('is_file'):
                 continue
+            parent = info.get('parent', '')
+            # A root is a directory whose parent IS the common prefix
+            if parent == common_prefix:
+                total_nodes = self._count_nodes_in_tree(path)
+                if total_nodes > 0:  # Skip empty directories
+                    self._roots.append(path)
 
-            # Skip hidden/system directories
-            if name.startswith('_') or name.startswith('.'):
-                continue
+        # If no roots found (single-directory project), use common prefix itself
+        if not self._roots and common_prefix in self._directory_tree:
+            self._roots = [common_prefix]
 
-            # Skip single-letter or two-letter directories
-            if len(name) <= 2:
-                continue
-
-            # Check if it's a known project OR has substantial nested structure
-            is_known = name in known_projects
-            has_children = bool(info.get('children'))
-            total_nodes = self._count_nodes_in_tree(root)
-
-            # Accept if: known project, or has subdirectories with 100+ nodes
-            if is_known or (has_children and total_nodes >= 100):
-                self._roots.append(root)
+        # If there's only one root, drill down to its children for a more useful view
+        while len(self._roots) == 1:
+            only_root = self._roots[0]
+            info = self._directory_tree.get(only_root, {})
+            children_dirs = [c for c in info.get('children', [])
+                             if not self._directory_tree.get(c, {}).get('is_file')
+                             and self._count_nodes_in_tree(c) > 0]
+            if len(children_dirs) >= 2:
+                # This root has multiple meaningful children — use them as roots
+                self._roots = children_dirs
+                break
+            elif len(children_dirs) == 1:
+                # Single child — drill down further
+                self._roots = children_dirs
+            else:
+                # No children dirs, keep this as the only root
+                break
 
     def _count_nodes_in_tree(self, path: str) -> int:
         """Count nodes recursively for filtering."""
