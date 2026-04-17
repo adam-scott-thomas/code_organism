@@ -259,23 +259,17 @@ class SolarSystemRenderer:
                 import random
 
                 nodes = []
-                # Use roots as galaxies (top-level directories like blackbox, inspector, etc.)
+                # Use roots as galaxies
+                n_roots = max(len(roots), 1)
                 for i, root_path in enumerate(roots):
                     info = directory_tree[root_path]
                     uid = path_to_id[root_path]
 
-                    # Count total nodes under this directory
                     total = self._count_nodes_recursive(root_path)
-
-                    # Calculate health based on nodes
                     health = self._calculate_health(root_path)
 
-                    # Arrange in a circle - keep radius reasonable
-                    angle = (2 * math.pi * i) / max(len(roots), 1)
-                    radius = 30 + min(len(roots), 20) * 3  # Cap radius growth
-                    x = math.cos(angle) * radius
-                    z = math.sin(angle) * radius
-                    y = (random.random() - 0.5) * 10
+                    # Fibonacci sphere distribution for true 3D
+                    x, y, z = self._fibonacci_sphere_point(i, n_roots, radius=40)
 
                     nodes.append({
                         'id': uid,
@@ -342,12 +336,8 @@ class SolarSystemRenderer:
                     else:
                         cosmic_type = 'star_system'  # Subdirs are star systems
 
-                    # Arrange in a circle
-                    angle = (2 * math.pi * i) / max(total_items, 1)
-                    radius = 20 + total_items * 1.5
-                    x = math.cos(angle) * radius
-                    z = math.sin(angle) * radius
-                    y = (random.random() - 0.5) * 8
+                    # Fibonacci sphere distribution
+                    x, y, z = self._fibonacci_sphere_point(i, total_items, radius=25 + total_items * 0.8)
 
                     # Check if expandable
                     has_children = bool(child_info.get('children') or child_info.get('files') or child_info.get('nodes'))
@@ -404,11 +394,7 @@ class SolarSystemRenderer:
                         'method': 'asteroid',
                     }.get(node_type, 'asteroid')
 
-                    angle = (2 * math.pi * i) / max(total, 1)
-                    radius = 15 + total * 0.5
-                    x = math.cos(angle) * radius
-                    z = math.sin(angle) * radius
-                    y = 0
+                    x, y, z = self._fibonacci_sphere_point(i, total, radius=15 + total * 0.3)
 
                     health = node.health.value if hasattr(node.health, 'value') else str(node.health)
 
@@ -431,6 +417,20 @@ class SolarSystemRenderer:
                     'level_name': f'File: {file_name}',
                     'is_leaf': True,
                 }
+
+            @staticmethod
+            def _fibonacci_sphere_point(index: int, total: int, radius: float = 30) -> tuple:
+                """Distribute points on a sphere using Fibonacci spiral."""
+                import math
+                if total <= 1:
+                    return (0, 0, 0)
+                golden_ratio = (1 + math.sqrt(5)) / 2
+                theta = 2 * math.pi * index / golden_ratio
+                phi = math.acos(1 - 2 * (index + 0.5) / total)
+                x = radius * math.sin(phi) * math.cos(theta)
+                y = radius * math.cos(phi)
+                z = radius * math.sin(phi) * math.sin(theta)
+                return (round(x, 2), round(y, 2), round(z, 2))
 
             def _count_nodes_recursive(self, path: str) -> int:
                 """Count all code nodes under a path."""
@@ -847,7 +847,7 @@ class SolarSystemRenderer:
                 const size = (node.size || 1) * (node.type === 'galaxy' ? 1.5 : 1);
                 mesh.scale.set(size, size, size);
 
-                mesh.userData = node;
+                mesh.userData = {{ ...node, size: size }};
                 scene.add(mesh);
                 meshes.push(mesh);
 
@@ -899,6 +899,9 @@ class SolarSystemRenderer:
 
             // Fit camera to scene
             fitCameraToScene();
+
+            // Initialize force simulation for new nodes
+            initForceState();
         }}
 
         function fitCameraToScene() {{
@@ -1059,16 +1062,77 @@ class SolarSystemRenderer:
             renderer.setSize(window.innerWidth, window.innerHeight);
         }});
 
+        // 3D force simulation state
+        const nodeVelocities = new Map();  // mesh -> {{vx, vy, vz}}
+
+        function initForceState() {{
+            meshes.forEach(mesh => {{
+                nodeVelocities.set(mesh, {{ vx: 0, vy: 0, vz: 0 }});
+            }});
+        }}
+
+        function applyForces() {{
+            const centerForce = 0.0005;   // Pull toward center
+            const repulsion = 50;         // Push apart
+            const damping = 0.95;         // Velocity decay
+            const minDist = 3;
+
+            meshes.forEach((meshA, i) => {{
+                const vel = nodeVelocities.get(meshA);
+                if (!vel) return;
+
+                // Attract to origin (keeps the cluster together)
+                vel.vx -= meshA.position.x * centerForce;
+                vel.vy -= meshA.position.y * centerForce;
+                vel.vz -= meshA.position.z * centerForce;
+
+                // Repel from other nodes
+                meshes.forEach((meshB, j) => {{
+                    if (i >= j) return;
+                    const dx = meshA.position.x - meshB.position.x;
+                    const dy = meshA.position.y - meshB.position.y;
+                    const dz = meshA.position.z - meshB.position.z;
+                    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) || minDist;
+                    if (dist < repulsion) {{
+                        const force = repulsion / (dist * dist);
+                        const fx = (dx / dist) * force * 0.01;
+                        const fy = (dy / dist) * force * 0.01;
+                        const fz = (dz / dist) * force * 0.01;
+                        vel.vx += fx; vel.vy += fy; vel.vz += fz;
+                        const velB = nodeVelocities.get(meshB);
+                        if (velB) {{ velB.vx -= fx; velB.vy -= fy; velB.vz -= fz; }}
+                    }}
+                }});
+
+                // Damping
+                vel.vx *= damping; vel.vy *= damping; vel.vz *= damping;
+
+                // Apply velocity
+                meshA.position.x += vel.vx;
+                meshA.position.y += vel.vy;
+                meshA.position.z += vel.vz;
+
+                // Update label position if present
+                if (meshA.userData && meshA.userData.label) {{
+                    const label = meshA.userData.label;
+                    label.position.copy(meshA.position);
+                    label.position.y += meshA.userData.size * 1.5 + 2;
+                }}
+            }});
+        }}
+
         // Animation loop
         function animate() {{
             requestAnimationFrame(animate);
             controls.update();
 
-            // Gentle rotation for galaxies
+            // Run force simulation
+            applyForces();
+
+            // Gentle self-rotation for all bodies
             meshes.forEach(mesh => {{
-                if (mesh.userData && mesh.userData.type === 'galaxy') {{
-                    mesh.rotation.y += 0.002;
-                }}
+                mesh.rotation.y += 0.003;
+                mesh.rotation.x += 0.001;
             }});
 
             renderer.render(scene, camera);
