@@ -26,7 +26,7 @@ Static analyzers hand you a JSON blob. Linters yell at you line-by-line. Code Or
 
 ```bash
 # Install
-git clone https://github.com/GhostLogicTech/code_organism.git
+git clone https://github.com/adam-scott-thomas/code_organism.git
 cd code_organism
 pip install -e .
 
