@@ -1,5 +1,10 @@
 # Code Organism
 
+[![tests](https://github.com/adam-scott-thomas/code_organism/actions/workflows/test.yml/badge.svg)](https://github.com/adam-scott-thomas/code_organism/actions/workflows/test.yml)
+[![python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
+[![license](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+[![code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230)](https://github.com/astral-sh/ruff)
+
 > **See the soul of software.** A code intelligence engine that treats your codebase like a living thing — parses it, measures its vital signs, detects its cancers, and renders it in 3D.
 
 Static analyzers hand you a JSON blob. Linters yell at you line-by-line. Code Organism gives you a **spatial, health-scored, interactively navigable** view of what you actually built — across eight languages, backed by a persistent graph database, with malware detection and runtime tracing wired in.
