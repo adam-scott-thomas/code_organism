@@ -142,8 +142,14 @@ Expose the whole engine as tools for Claude, Cursor, or any MCP client:
 python -m Code_Organism.mcp_server
 ```
 
-Then in your MCP client config (e.g. `mcp_config_example.json`):
+### One-line install for common MCP clients
 
+**Claude Code** — add it once with the CLI:
+```bash
+claude mcp add code-organism -- python -m Code_Organism.mcp_server
+```
+
+**Claude Desktop** — append to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 ```json
 {
   "mcpServers": {
@@ -153,6 +159,13 @@ Then in your MCP client config (e.g. `mcp_config_example.json`):
     }
   }
 }
+```
+
+**Cursor** / **Continue** — same JSON shape under `mcpServers`. Drop into the IDE's MCP settings.
+
+**Docker** — run the MCP server container; default `CMD` already serves it:
+```bash
+docker run -i --rm code-organism
 ```
 
 Your AI agent can now call `analyze`, `health`, `impact`, `communities`, and `query` directly — on any project you point it at.
