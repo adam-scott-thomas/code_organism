@@ -1,0 +1,133 @@
+{
+  "health_summary": {
+    "healthy": 0.9591272280270436,
+    "stressed": 0.0015365703749231714,
+    "inflamed": 0.0018438844499078057,
+    "necrotic": 0.037492317148125384,
+    "cancerous": 0.0
+  },
+  "stats": null,
+  "top_unhealthy": [
+    {
+      "name": "_extract",
+      "qualified_name": "tree_sitter_parser.TreeSitterParser._extract",
+      "type": "method",
+      "health_status": "necrotic",
+      "health_score": 0.55,
+      "cyclomatic_complexity": 87,
+      "lines_of_code": 393,
+      "health_notes": [
+        "Uncalled private/nested code"
+      ]
+    },
+    {
+      "name": "_walk",
+      "qualified_name": "tree_sitter_parser.TreeSitterParser._extract._walk",
+      "type": "method",
+      "health_status": "inflamed",
+      "health_score": 0.55,
+      "cyclomatic_complexity": 41,
+      "lines_of_code": 145,
+      "health_notes": [
+        "Self-referential - circular dependency"
+      ]
+    },
+    {
+      "name": "_build_hierarchy",
+      "qualified_name": "solar_system.SolarSystemRenderer._build_hierarchy",
+      "type": "method",
+      "health_status": "necrotic",
+      "health_score": 0.55,
+      "cyclomatic_complexity": 41,
+      "lines_of_code": 144,
+      "health_notes": [
+        "Uncalled private/nested code"
+      ]
+    },
+    {
+      "name": "_start_server",
+      "qualified_name": "solar_system.SolarSystemRenderer._start_server",
+      "type": "method",
+      "health_status": "necrotic",
+      "health_score": 0.55,
+      "cyclomatic_complexity": 39,
+      "lines_of_code": 261,
+      "health_notes": [
+        "Uncalled private/nested code"
+      ]
+    },
+    {
+      "name": "_visit_function",
+      "qualified_name": "ast_walker.CodeAnatomist._visit_function",
+      "type": "method",
+      "health_status": "necrotic",
+      "health_score": 0.75,
+      "cyclomatic_complexity": 25,
+      "lines_of_code": 126,
+      "health_notes": [
+        "Uncalled private/nested code"
+      ]
+    },
+    {
+      "name": "_get_name",
+      "qualified_name": "ast_walker.CodeAnatomist._get_name",
+      "type": "method",
+      "health_status": "necrotic",
+      "health_score": 0.77,
+      "cyclomatic_complexity": 24,
+      "lines_of_code": 52,
+      "health_notes": [
+        "Uncalled private/nested code"
+      ]
+    },
+    {
+      "name": "_visit_assignment",
+      "qualified_name": "extract_execute_cycle.FunctionExtractor._visit_assignment",
+      "type": "method",
+      "health_status": "necrotic",
+      "health_score": 0.85,
+      "cyclomatic_complexity": 20,
+      "lines_of_code": 35,
+      "health_notes": [
+        "Uncalled private/nested code"
+      ]
+    },
+    {
+      "name": "_louvain_partition",
+      "qualified_name": "clustering.HierarchicalClusterer._louvain_partition",
+      "type": "method",
+      "health_status": "necrotic",
+      "health_score": 0.89,
+      "cyclomatic_complexity": 18,
+      "lines_of_code": 76,
+      "health_notes": [
+        "Uncalled private/nested code"
+      ]
+    },
+    {
+      "name": "_aggregate_stats",
+      "qualified_name": "clustering.HierarchicalClusterer._aggregate_stats",
+      "type": "method",
+      "health_status": "necrotic",
+      "health_score": 0.93,
+      "cyclomatic_complexity": 16,
+      "lines_of_code": 56,
+      "health_notes": [
+        "Uncalled private/nested code"
+      ]
+    },
+    {
+      "name": "_visit_stmt",
+      "qualified_name": "extract_execute_cycle.FunctionExtractor._visit_stmt",
+      "type": "method",
+      "health_status": "necrotic",
+      "health_score": 0.9500000000000001,
+      "cyclomatic_complexity": 15,
+      "lines_of_code": 27,
+      "health_notes": [
+        "Uncalled private/nested code"
+      ]
+    }
+  ],
+  "_note": "Truncated: full health output is ~930KB. Top-10 unhealthy nodes only here."
+}

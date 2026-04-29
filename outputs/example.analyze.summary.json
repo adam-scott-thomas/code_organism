@@ -1,0 +1,77 @@
+{
+  "stats": {
+    "total_nodes": 3254,
+    "total_edges": 3078,
+    "total_modules": 55,
+    "total_classes": 97,
+    "total_functions": 605,
+    "total_lines": 27261,
+    "avg_complexity": 0.7470805162876459,
+    "max_complexity": 87,
+    "max_depth": 4,
+    "circular_dependencies": 6,
+    "healthy_nodes": 3121,
+    "stressed_nodes": 5,
+    "inflamed_nodes": 6,
+    "necrotic_nodes": 122,
+    "cancerous_nodes": 0
+  },
+  "sample_nodes": [
+    {
+      "id": "2f61ff7cfb15fbd5",
+      "name": "cli",
+      "qualified_name": "cli",
+      "type": "module",
+      "health_status": "healthy",
+      "health_score": 1.0,
+      "cyclomatic_complexity": 0,
+      "lines_of_code": 1,
+      "depth": 0
+    },
+    {
+      "id": "dd03be5d26cf7d28",
+      "name": "SUBCOMMANDS",
+      "qualified_name": "cli.SUBCOMMANDS",
+      "type": "variable",
+      "health_status": "healthy",
+      "health_score": 1.0,
+      "cyclomatic_complexity": 0,
+      "lines_of_code": 0,
+      "depth": 0
+    },
+    {
+      "id": "f1ff8e8b8736b74b",
+      "name": "argparse",
+      "qualified_name": "argparse",
+      "type": "external",
+      "health_status": "healthy",
+      "health_score": 1.0,
+      "cyclomatic_complexity": 0,
+      "lines_of_code": 0,
+      "depth": 0
+    },
+    {
+      "id": "f991505baf7389db",
+      "name": "json",
+      "qualified_name": "json",
+      "type": "external",
+      "health_status": "healthy",
+      "health_score": 1.0,
+      "cyclomatic_complexity": 0,
+      "lines_of_code": 0,
+      "depth": 0
+    },
+    {
+      "id": "7deda3e71a1ca33c",
+      "name": "sys",
+      "qualified_name": "sys",
+      "type": "external",
+      "health_status": "healthy",
+      "health_score": 1.0,
+      "cyclomatic_complexity": 0,
+      "lines_of_code": 0,
+      "depth": 0
+    }
+  ],
+  "_note": "Truncated: full analyze output is ~1.5MB. Stats and shape only here. Run `python -m Code_Organism.cli analyze . --output json` for the full dataset."
+}
