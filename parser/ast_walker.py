@@ -160,7 +160,7 @@ class CodeAnatomist(ast.NodeVisitor):
                     self._record_module_constant(stmt.target.id, stmt, type_ann)
 
     def _record_module_constant(
-        self, name: str, node: ast.AST, type_ann: str | None = None,
+        self, name: str, node: ast.stmt, type_ann: str | None = None,
     ) -> None:
         qualified_name = f"{self.context.module_name}.{name}"
         const_node = OrganismNode(
@@ -207,7 +207,7 @@ class CodeAnatomist(ast.NodeVisitor):
             )
 
     def _create_import_node_and_edge(
-        self, full_name: str, node: ast.AST, *,
+        self, full_name: str, node: ast.stmt, *,
         type_checking_only: bool = False,
     ) -> None:
         ext_id = OrganismNode.generate_id(full_name, NodeType.EXTERNAL_MODULE)
@@ -228,9 +228,11 @@ class CodeAnatomist(ast.NodeVisitor):
             self._add_node(ext_node)
 
         edge_type = "import_type_only" if type_checking_only else "import"
+        parent_id = self.context.parent_id
+        assert parent_id is not None  # set before any visit_Import call
         edge = Edge(
-            id=Edge.generate_id(self.context.parent_id, ext_id, edge_type),
-            source_id=self.context.parent_id,
+            id=Edge.generate_id(parent_id, ext_id, edge_type),
+            source_id=parent_id,
             target_id=ext_id,
             edge_type=edge_type,
         )
@@ -519,7 +521,8 @@ class CodeAnatomist(ast.NodeVisitor):
             func_node.health_notes.append("dunder")
 
         if decorator_details:
-            func_node.signature = " | ".join(decorator_details) + "\n" + func_node.signature
+            base_sig = func_node.signature or ""
+            func_node.signature = " | ".join(decorator_details) + "\n" + base_sig
 
         self._add_node(func_node)
         self._defined_names[node.name] = func_node.id
@@ -632,7 +635,7 @@ class CodeAnatomist(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _record_variable(
-        self, name: str, node: ast.AST, type_ann: str | None = None,
+        self, name: str, node: ast.stmt, type_ann: str | None = None,
     ) -> None:
         # Only class attributes (not local vars — too noisy)
         if self.context.current_class and not self.context.current_function:
@@ -716,7 +719,7 @@ class CodeAnatomist(ast.NodeVisitor):
 
     @staticmethod
     def _binop_symbol(op: ast.AST) -> str:
-        symbols = {
+        symbols: dict[type, str] = {
             ast.BitOr: "|", ast.BitAnd: "&", ast.BitXor: "^",
             ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Div: "/",
             ast.Mod: "%", ast.Pow: "**", ast.FloorDiv: "//",

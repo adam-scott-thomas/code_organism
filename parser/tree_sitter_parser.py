@@ -121,10 +121,16 @@ def _child_by_type(node: tree_sitter.Node, *types: str) -> tree_sitter.Node | No
     return None
 
 
+def _node_text(node: tree_sitter.Node | None) -> str:
+    """Return the UTF-8 text of a node, or ``""`` if the node has no text."""
+    if node is None or node.text is None:
+        return ""
+    return node.text.decode("utf-8", errors="replace")
+
+
 def _child_text(node: tree_sitter.Node, *types: str) -> str:
     """Return the text of the first child matching any of *types*, or ``""``."""
-    child = _child_by_type(node, *types)
-    return child.text.decode("utf-8", errors="replace") if child else ""
+    return _node_text(_child_by_type(node, *types))
 
 
 def _node_name(node: tree_sitter.Node, lang_key: str) -> str:
@@ -339,15 +345,15 @@ class TreeSitterParser:
             if string_node:
                 frag = _child_by_type(string_node, "string_fragment")
                 if frag:
-                    return frag.text.decode("utf-8", errors="replace")
+                    return _node_text(frag)
                 # Fallback: strip quotes
-                raw = string_node.text.decode("utf-8", errors="replace")
+                raw = _node_text(string_node)
                 return raw.strip("'\"")
 
             # Java: import_declaration -> scoped_identifier
             scoped = _child_by_type(ts_node, "scoped_identifier")
             if scoped:
-                return scoped.text.decode("utf-8", errors="replace")
+                return _node_text(scoped)
 
             # Go: import_declaration -> import_spec -> interpreted_string_literal
             spec = _child_by_type(ts_node, "import_spec")
@@ -356,8 +362,8 @@ class TreeSitterParser:
                 if lit:
                     content = _child_by_type(lit, "interpreted_string_literal_content")
                     if content:
-                        return content.text.decode("utf-8", errors="replace")
-                    return lit.text.decode("utf-8", errors="replace").strip('"')
+                        return _node_text(content)
+                    return _node_text(lit).strip('"')
 
             # Go: import_spec_list (multi-import)
             spec_list = _child_by_type(ts_node, "import_spec_list")
@@ -369,22 +375,22 @@ class TreeSitterParser:
                     if lit:
                         content = _child_by_type(lit, "interpreted_string_literal_content")
                         if content:
-                            return content.text.decode("utf-8", errors="replace")
+                            return _node_text(content)
 
             # Rust: use_declaration
             if ts_node.type == "use_declaration":
                 # Return everything after 'use' keyword
                 for child in ts_node.children:
                     if child.type not in ("use", ";", "pub"):
-                        return child.text.decode("utf-8", errors="replace")
+                        return _node_text(child)
 
             # C/C++: preproc_include -> system_lib_string or string_literal
             for child_type in ("system_lib_string", "string_literal"):
-                child = _child_by_type(ts_node, child_type)
-                if child:
-                    return child.text.decode("utf-8", errors="replace").strip("<>\"")
+                lit_child = _child_by_type(ts_node, child_type)
+                if lit_child:
+                    return _node_text(lit_child).strip("<>\"")
 
-            return ts_node.text.decode("utf-8", errors="replace")[:60]
+            return _node_text(ts_node)[:60]
 
         def _collect_calls(
             ts_node: tree_sitter.Node,
@@ -447,16 +453,16 @@ class TreeSitterParser:
                 return ""
             first = call_node.children[0]
             if first.type == "identifier":
-                return first.text.decode("utf-8", errors="replace")
+                return _node_text(first)
             if first.type == "member_expression":
                 prop = _child_by_type(first, "property_identifier")
                 if prop:
-                    return prop.text.decode("utf-8", errors="replace")
+                    return _node_text(prop)
             if first.type == "field_expression":
                 field = _child_by_type(first, "field_identifier")
                 if field:
-                    return field.text.decode("utf-8", errors="replace")
-            return first.text.decode("utf-8", errors="replace")
+                    return _node_text(field)
+            return _node_text(first)
 
         def _walk_named_arrow_functions(ts_node: tree_sitter.Node, parent_qname: str, parent_id: str) -> None:
             """Detect named arrow functions: const foo = (...) => { ... }"""
@@ -468,7 +474,7 @@ class TreeSitterParser:
                         name_node = _child_by_type(child, "identifier")
                         arrow = _child_by_type(child, "arrow_function")
                         if name_node and arrow:
-                            name = name_node.text.decode("utf-8", errors="replace")
+                            name = _node_text(name_node)
                             org_node = _make_node(
                                 name, NodeType.FUNCTION, arrow, parent_qname, parent_id,
                             )
