@@ -31,5 +31,8 @@ jobs:
       - name: Lint with ruff
         run: ruff check .
 
+      - name: Type-check with mypy
+        run: python -m mypy .
+
       - name: Run pytest with coverage
         run: python -m pytest tests/ -q --cov --cov-report=term
