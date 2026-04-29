@@ -94,7 +94,7 @@ class PatternDetector(ast.NodeVisitor):
         return self.result
 
     def _add_pattern(self, name: str, severity: PatternSeverity,
-                     description: str, node: ast.AST,
+                     description: str, node: ast.stmt | ast.expr | ast.ExceptHandler,
                      suggestion: str, category: str) -> None:
         """Add a detected pattern."""
         self.result.patterns.append(Pattern(

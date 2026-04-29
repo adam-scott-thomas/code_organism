@@ -119,7 +119,7 @@ class ExecutionRecorder:
         # Create metadata
         metadata = RecordingMetadata(
             session_id=session_id,
-            organism_id=self.organism.id,
+            organism_id=self.organism.name,
             organism_name=self.organism.name,
             started_at=datetime.now(timezone.utc).isoformat(),
             file_count=len(set(n.position.file for n in self.organism.nodes.values() if n.position)),
@@ -147,7 +147,7 @@ class ExecutionRecorder:
             original_record(frame)
             self._on_frame(frame)
 
-        self.organism.record_frame = hooked_record
+        self.organism.record_frame = hooked_record  # type: ignore[method-assign]
         self._original_record = original_record
 
         self._recording = True
@@ -165,7 +165,7 @@ class ExecutionRecorder:
             self.tracer.stop()
 
         # Restore original record function
-        self.organism.record_frame = self._original_record
+        self.organism.record_frame = self._original_record  # type: ignore[method-assign]
 
         # Finalize metadata
         if self.session:
@@ -188,6 +188,7 @@ class ExecutionRecorder:
             if self.session.frames:
                 self.session.metadata.duration_ns = self.session.frames[-1].get("elapsed_ns", 0)
 
+        assert self.session is not None  # set by start()
         return self.session
 
     def _on_frame(self, frame: ExecutionFrame) -> None:

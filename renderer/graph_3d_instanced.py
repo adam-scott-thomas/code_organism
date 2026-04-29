@@ -90,6 +90,7 @@ class InstancedOrganismRenderer:
 
     def _start_server(self) -> None:
         """Start HTTP server with API endpoints."""
+        assert self.temp_dir is not None  # set by render() before _start_server
         os.chdir(self.temp_dir)
 
         # Create handler with reference to organism

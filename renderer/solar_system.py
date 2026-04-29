@@ -24,6 +24,7 @@ import tempfile
 import threading
 import webbrowser
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 from ..model.organism import Organism
@@ -52,9 +53,9 @@ class SolarSystemRenderer:
     def _build_hierarchy(self) -> None:
         """Build the cosmic hierarchy from DIRECTORY structure."""
         # Build a tree based on actual file paths, not code connectivity
-        self._directory_tree = {}  # path -> {children: [], nodes: [], info: {}}
-        self._path_to_id = {}  # path -> unique ID
-        self._id_to_path = {}  # unique ID -> path
+        self._directory_tree: dict[str, dict[str, Any]] = {}
+        self._path_to_id: dict[str, str] = {}
+        self._id_to_path: dict[str, str] = {}
         self._id_counter = 0
 
         # Only include structural nodes with valid file positions
@@ -139,7 +140,7 @@ class SolarSystemRenderer:
         # we want to find the common prefix and use the first level below it as roots.
         all_paths = list(self._directory_tree.keys())
         if not all_paths:
-            self._roots = []
+            self._roots: list[str] = []
             return
 
         # Find the longest common prefix among all directory paths
@@ -226,6 +227,7 @@ class SolarSystemRenderer:
 
     def _start_server(self) -> None:
         """Start HTTP server with API endpoints."""
+        assert self.temp_dir is not None  # set by render() before _start_server
         os.chdir(self.temp_dir)
 
         org = self.organism
@@ -465,7 +467,7 @@ class SolarSystemRenderer:
 
                 if sum(health_counts.values()) == 0:
                     return 'healthy'
-                return max(health_counts, key=health_counts.get)
+                return max(health_counts, key=lambda k: health_counts[k])
 
             def _serve_json(self, data: dict):
                 self.send_response(200)

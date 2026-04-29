@@ -167,11 +167,11 @@ def detect_processes(organism: Organism) -> list[dict]:
 
         steps = []
         for step_idx, nid in enumerate(trace):
-            node = organism.nodes.get(nid)
+            step_node = organism.nodes.get(nid)
             steps.append({
                 "step": step_idx,
                 "node_id": nid,
-                "name": node.name if node else nid[:8],
+                "name": step_node.name if step_node else nid[:8],
             })
 
         name = f"{entry_name} -> {terminal_name}"

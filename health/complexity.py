@@ -265,7 +265,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         """
         complexity = 0
 
-        def walk(n: ast.AST, nesting_level: int) -> int:
+        def walk(n: ast.AST, nesting_level: int) -> None:
             nonlocal complexity
 
             increment = 0

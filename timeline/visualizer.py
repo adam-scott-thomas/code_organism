@@ -483,7 +483,7 @@ class TimelineVisualizer:
 
         # Divide timeline into buckets
         bucket_count = 100
-        buckets = [0] * bucket_count
+        buckets: list[float] = [0.0] * bucket_count
         total = len(self.player.session.frames)
 
         for i, frame in enumerate(self.player.session.frames):

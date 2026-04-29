@@ -113,14 +113,14 @@ def detect_communities(
     #     defined in the same file even if they don't call each other.
     module_groups: dict[str, list[str]] = defaultdict(list)
     for nid in structural_ids:
-        node = organism.nodes.get(nid)
-        if node and node.qualified_name:
+        member = organism.nodes.get(nid)
+        if member and member.qualified_name:
             # Module prefix = first dotted component (e.g. "cli" from "cli.main")
-            parts = node.qualified_name.split(".")
+            parts = member.qualified_name.split(".")
             if len(parts) >= 2:
                 module_prefix = parts[0]
             else:
-                module_prefix = node.qualified_name
+                module_prefix = member.qualified_name
             module_groups[module_prefix].append(nid)
 
     for _mod, members in module_groups.items():
