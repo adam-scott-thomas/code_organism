@@ -68,7 +68,11 @@ class Tracer:
         self._frame_index = 0
         self._active = True
 
-        # Install the trace function
+        # Install the trace function — but save the previous tracer first
+        # so we can restore it in stop(). Without this, coverage tools and
+        # debuggers that already have a tracer installed (pytest-cov, pdb)
+        # are clobbered for the rest of the process.
+        self._prev_sys_trace = sys.gettrace()
         sys.settrace(self._trace_function)
         threading.settrace(self._trace_function)
 
@@ -77,7 +81,8 @@ class Tracer:
     def stop(self) -> ExecutionTrace | None:
         """Stop tracing and return the trace."""
         self._active = False
-        sys.settrace(None)
+        # Restore whatever tracer was installed before start()
+        sys.settrace(getattr(self, "_prev_sys_trace", None))
         threading.settrace(None)
 
         return self.organism.stop_trace()

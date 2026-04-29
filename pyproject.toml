@@ -75,7 +75,7 @@ exclude_lines = [
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
 ]
-fail_under = 45  # honest baseline; ratchet up as tests are added
+fail_under = 50  # ratchet — target 60 once clustering/layout backfill lands
 show_missing = true
 skip_covered = false
 
