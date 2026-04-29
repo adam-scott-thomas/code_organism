@@ -213,6 +213,7 @@ def index(path: str, db_path: str = "") -> str:
         with GraphStore(resolved_db) as store:
             store.save(organism)
             node_count = store.count_nodes()
+            assert store._conn is not None  # set by __enter__
 
             # Detect and store communities
             communities = detect_communities(organism)

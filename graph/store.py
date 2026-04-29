@@ -88,11 +88,11 @@ class GraphStore:
 
         # --- insert nodes ---
         for node in organism.nodes.values():
-            table = _TYPE_TO_TABLE.get(node.node_type.value)
-            if table is None:
+            table_or_none = _TYPE_TO_TABLE.get(node.node_type.value)
+            if table_or_none is None:
                 # Skip relationship-type "nodes" (IMPORT, CALL, REFERENCE)
                 continue
-            self._insert_node(conn, node, table)
+            self._insert_node(conn, node, table_or_none)
 
         # --- insert edges ---
         for edge in organism.edges.values():
@@ -106,8 +106,11 @@ class GraphStore:
         """Return the total number of nodes across all tables."""
         assert self._conn is not None, "Store is not open"
         result = self._conn.execute("MATCH (n) RETURN count(n)")
+        if isinstance(result, list):
+            result = result[-1]
         row = result.get_next()
-        return int(row[0])
+        # kuzu returns a list-like row; the type stub says dict.
+        return int(row[0])  # type: ignore[index]
 
     def query(self, cypher: str, parameters: dict | None = None) -> list[dict]:
         """Execute a Cypher query and return results as a list of dicts.
@@ -119,6 +122,11 @@ class GraphStore:
             result = self._conn.execute(cypher, parameters)
         else:
             result = self._conn.execute(cypher)
+
+        # kuzu returns list[QueryResult] only when the query string contains
+        # multiple statements; single-Cypher callers get a single QueryResult.
+        if isinstance(result, list):
+            result = result[-1]
 
         columns = result.get_column_names()
         rows: list[dict] = []

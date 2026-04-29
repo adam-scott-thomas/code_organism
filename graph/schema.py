@@ -45,9 +45,12 @@ def create_schema(conn: kuzu.Connection) -> None:
     """Create the KuzuDB schema. Idempotent -- safe to call multiple times."""
     # Check which tables already exist
     result = conn.execute("CALL show_tables() RETURN name")
+    if isinstance(result, list):
+        result = result[-1]
     existing: set[str] = set()
     while result.has_next():
-        existing.add(result.get_next()[0])
+        # kuzu's get_next() returns a list-like row; the type stub says dict.
+        existing.add(str(result.get_next()[0]))  # type: ignore[index]
 
     # Create node tables
     for table_name, columns in NODE_TABLES.items():
