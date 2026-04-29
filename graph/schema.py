@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """KuzuDB schema for Code_Organism graph."""
 import kuzu
 

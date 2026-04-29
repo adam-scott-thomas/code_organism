@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """
 Allow running as: python -m code_organism
 """

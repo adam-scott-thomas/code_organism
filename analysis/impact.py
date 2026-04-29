@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """
 CODE ORGANISM: IMPACT / BLAST RADIUS ANALYSIS
 
