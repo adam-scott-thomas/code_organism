@@ -75,7 +75,7 @@ exclude_lines = [
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
 ]
-fail_under = 50  # ratchet — target 60 once clustering/layout backfill lands
+fail_under = 55  # ratchet — target 65 once layout/health backfill lands
 show_missing = true
 skip_covered = false
 
