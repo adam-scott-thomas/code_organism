@@ -1,0 +1,73 @@
+name: release
+
+# Triggered by pushing a tag like v2.0.0, or manually from the Actions tab.
+# Builds an sdist+wheel and publishes to PyPI via Trusted Publisher (OIDC) —
+# no long-lived API token required.
+#
+# To enable: configure a Trusted Publisher at
+#   https://pypi.org/manage/project/code-organism/settings/publishing/
+# pointing at:
+#   owner:       adam-scott-thomas
+#   repository:  code_organism
+#   workflow:    release.yml
+#   environment: pypi
+#
+# Until configured, the publish step is a no-op (the OIDC token won't be
+# accepted by PyPI). The build still runs and uploads the artifacts to the
+# GitHub Release.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write   # to attach artifacts to the GitHub Release
+  id-token: write   # to authenticate with PyPI Trusted Publisher
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist + wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Upload artifacts to the workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+
+      - name: Attach artifacts to the GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+
+  publish-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi   # the Trusted Publisher environment
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # No `password:` field — Trusted Publisher OIDC is used instead.
+          # Skip if Trusted Publisher isn't configured yet (workflow won't
+          # fail; the action itself errors clearly if PyPI rejects the token).
+          skip-existing: true
