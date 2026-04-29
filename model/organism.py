@@ -13,6 +13,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from .nodes import (
     Edge,
@@ -185,6 +186,11 @@ class Organism:
 
         # Computed stats
         self._stats: OrganismStats | None = None
+
+        # Hierarchical clustering (built lazily on first hierarchical-data call)
+        self._clusterer: Any = None
+        self._num_levels: int = 0
+        self._layout_engine: Any = None
         self._stats_dirty = True
 
     # =========================================================================
@@ -380,9 +386,9 @@ class Organism:
 
     def find_circular_dependencies(self) -> list[list[str]]:
         """Find all circular dependency chains."""
-        cycles = []
-        visited = set()
-        path = []
+        cycles: list[list[str]] = []
+        visited: set[str] = set()
+        path: list[str] = []
 
         def dfs(node_id: str) -> None:
             if node_id in path:
@@ -430,6 +436,7 @@ class Organism:
         """Get aggregate statistics (computed lazily)."""
         if self._stats_dirty or self._stats is None:
             self._compute_stats()
+        assert self._stats is not None  # set by _compute_stats
         return self._stats
 
     def _compute_stats(self) -> None:
@@ -734,12 +741,18 @@ class Organism:
 
             # Compute layout
             if nodes_data:
-                sub_nodes = {n['id']: self.nodes[n['id']] for n in nodes_data if n['id'] in self.nodes}
-                sub_edges = {e['id']: self.edges[e['id']] for e in edges_data if e['id'] in self.edges}
+                sub_nodes: dict[str, OrganismNode] = {
+                    str(n['id']): self.nodes[str(n['id'])]
+                    for n in nodes_data if str(n['id']) in self.nodes
+                }
+                sub_edges: dict[str, Edge] = {
+                    str(e['id']): self.edges[str(e['id'])]
+                    for e in edges_data if str(e['id']) in self.edges
+                }
                 positions = self._layout_engine.compute_layout(sub_nodes, sub_edges)
 
                 for node_data in nodes_data:
-                    pos = positions.get(node_data['id'], {})
+                    pos = positions.get(str(node_data['id']), {})
                     node_data['x'] = pos.get('x', 0)
                     node_data['y'] = pos.get('y', 0)
                     node_data['z'] = pos.get('z', 0)
@@ -833,17 +846,18 @@ class Organism:
 
     def _stats_to_dict(self) -> dict:
         """Serialize stats to dictionary."""
+        s = self.stats  # property triggers compute and asserts non-None
         return {
-            "total_nodes": self._stats.total_nodes,
-            "total_edges": self._stats.total_edges,
-            "total_modules": self._stats.total_modules,
-            "total_classes": self._stats.total_classes,
-            "total_functions": self._stats.total_functions,
-            "total_lines": self._stats.total_lines,
-            "avg_complexity": self._stats.avg_complexity,
-            "max_complexity": self._stats.max_complexity,
-            "healthy_pct": self._stats.health_summary()["healthy"],
-            "circular_dependencies": self._stats.circular_dependencies,
+            "total_nodes": s.total_nodes,
+            "total_edges": s.total_edges,
+            "total_modules": s.total_modules,
+            "total_classes": s.total_classes,
+            "total_functions": s.total_functions,
+            "total_lines": s.total_lines,
+            "avg_complexity": s.avg_complexity,
+            "max_complexity": s.max_complexity,
+            "healthy_pct": s.health_summary()["healthy"],
+            "circular_dependencies": s.circular_dependencies,
         }
 
     def to_json(self, indent: int = 2) -> str:

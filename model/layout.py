@@ -76,12 +76,14 @@ class OctreeNode:
 
         # Insert into appropriate child
         octant = self._get_octant(pos)
-        if self.children[octant] is None:
+        child = self.children[octant]
+        if child is None:
             child_size = self.size / 2
             child_center = self._get_child_center(octant, child_size)
-            self.children[octant] = OctreeNode(child_center, child_size)
+            child = OctreeNode(child_center, child_size)
+            self.children[octant] = child
 
-        self.children[octant].insert(node_id, pos, mass)
+        child.insert(node_id, pos, mass)
 
     def _get_octant(self, pos: Position3D) -> int:
         """Determine which octant a position belongs to."""

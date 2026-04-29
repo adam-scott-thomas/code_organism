@@ -73,7 +73,7 @@ class ClusterNode:
             'necrotic': self.necrotic_count,
             'cancerous': self.cancerous_count,
         }
-        return max(counts, key=counts.get)
+        return max(counts, key=lambda k: counts[k])
 
     def to_dict(self) -> dict:
         """Serialize for JSON transmission."""
@@ -113,7 +113,7 @@ class ClusterEdge:
             'source': self.source_id,
             'target': self.target_id,
             'weight': self.weight,
-            'type': max(self.edge_types, key=self.edge_types.get) if self.edge_types else 'call',
+            'type': max(self.edge_types, key=lambda k: self.edge_types[k]) if self.edge_types else 'call',
         }
 
 
@@ -312,7 +312,7 @@ class HierarchicalClusterer:
 
                 # Calculate modularity gain for moving to each neighbor community
                 best_comm = current_comm
-                best_gain = 0
+                best_gain: float = 0.0
 
                 for target_comm in neighbor_comms:
                     if target_comm == current_comm:
@@ -423,7 +423,7 @@ class HierarchicalClusterer:
     def _aggregate_stats(
         self,
         cluster: ClusterNode,
-        child_ids: list[str],
+        child_ids: list[str] | set[str],
         child_level: int
     ) -> None:
         """Aggregate statistics from child nodes/clusters."""
