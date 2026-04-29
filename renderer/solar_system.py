@@ -36,9 +36,10 @@ class SolarSystemRenderer:
     Only the current "view" is rendered - never the whole codebase.
     """
 
-    def __init__(self, organism: Organism, port: int = 8765):
+    def __init__(self, organism: Organism, port: int = 8765, bind: str = "127.0.0.1"):
         self.organism = organism
         self.port = port
+        self.bind = bind
         self.server: Optional[socketserver.TCPServer] = None
         self.server_thread: Optional[threading.Thread] = None
         self.temp_dir: Optional[str] = None
@@ -472,7 +473,6 @@ class SolarSystemRenderer:
             def _serve_json(self, data: dict):
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(json.dumps(data).encode())
 
@@ -480,7 +480,7 @@ class SolarSystemRenderer:
                 pass
 
         socketserver.TCPServer.allow_reuse_address = True
-        self.server = socketserver.TCPServer(("", self.port), APIHandler)
+        self.server = socketserver.TCPServer((self.bind, self.port), APIHandler)
         self.server_thread = threading.Thread(target=self.server.serve_forever)
         self.server_thread.daemon = True
         self.server_thread.start()

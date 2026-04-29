@@ -30,10 +30,17 @@ class InstancedOrganismRenderer:
     - GPU-instanced rendering (one draw call per node type)
     """
 
-    def __init__(self, organism: Organism, port: int = 8765, max_level: int = 2):
+    def __init__(
+        self,
+        organism: Organism,
+        port: int = 8765,
+        max_level: int = 2,
+        bind: str = "127.0.0.1",
+    ):
         self.organism = organism
         self.port = port
         self.max_level = max_level
+        self.bind = bind
         self.server: Optional[socketserver.TCPServer] = None
         self.server_thread: Optional[threading.Thread] = None
         self.temp_dir: Optional[str] = None
@@ -106,7 +113,6 @@ class InstancedOrganismRenderer:
             def _serve_json(self, data: dict):
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(json.dumps(data).encode())
 
@@ -115,7 +121,7 @@ class InstancedOrganismRenderer:
 
         # Allow address reuse to avoid "address already in use" errors
         socketserver.TCPServer.allow_reuse_address = True
-        self.server = socketserver.TCPServer(("", self.port), APIHandler)
+        self.server = socketserver.TCPServer((self.bind, self.port), APIHandler)
         self.server_thread = threading.Thread(target=self.server.serve_forever)
         self.server_thread.daemon = True
         self.server_thread.start()

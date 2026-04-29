@@ -27,9 +27,10 @@ class OrganismRenderer:
     that can be viewed in any modern browser.
     """
 
-    def __init__(self, organism: Organism, port: int = 8765):
+    def __init__(self, organism: Organism, port: int = 8765, bind: str = "127.0.0.1"):
         self.organism = organism
         self.port = port
+        self.bind = bind
         self.server: Optional[socketserver.TCPServer] = None
         self.server_thread: Optional[threading.Thread] = None
 
@@ -80,7 +81,7 @@ class OrganismRenderer:
 
         handler = http.server.SimpleHTTPRequestHandler
 
-        self.server = socketserver.TCPServer(("", self.port), handler)
+        self.server = socketserver.TCPServer((self.bind, self.port), handler)
 
         self.server_thread = threading.Thread(target=self.server.serve_forever)
         self.server_thread.daemon = True

@@ -36,9 +36,11 @@ class PlaybackRenderer:
         session: RecordingSession,
         port: int = 8765,
         timeline_config: Optional[TimelineVisualizerConfig] = None,
+        bind: str = "127.0.0.1",
     ):
         self.session = session
         self.port = port
+        self.bind = bind
         self.player = TimelinePlayer(session)
         self.timeline_viz = TimelineVisualizer(self.player, timeline_config)
 
@@ -46,10 +48,12 @@ class PlaybackRenderer:
         self.server_thread: Optional[threading.Thread] = None
 
     @classmethod
-    def from_file(cls, filepath: Path, port: int = 8765) -> PlaybackRenderer:
+    def from_file(
+        cls, filepath: Path, port: int = 8765, bind: str = "127.0.0.1"
+    ) -> PlaybackRenderer:
         """Load from a recording file."""
         session = RecordingSession.load(filepath)
-        return cls(session, port)
+        return cls(session, port, bind=bind)
 
     def render(self, open_browser: bool = True) -> str:
         """Start the visualization and return the URL."""
@@ -76,7 +80,7 @@ class PlaybackRenderer:
         """Start the HTTP server."""
         os.chdir(self.temp_dir)
         handler = http.server.SimpleHTTPRequestHandler
-        self.server = socketserver.TCPServer(("", self.port), handler)
+        self.server = socketserver.TCPServer((self.bind, self.port), handler)
 
         self.server_thread = threading.Thread(target=self.server.serve_forever)
         self.server_thread.daemon = True
