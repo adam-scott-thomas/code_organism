@@ -1,5 +1,4 @@
 """Tests for graph.store — GraphStore persistence layer."""
-from pathlib import Path
 
 import pytest
 

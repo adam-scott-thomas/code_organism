@@ -215,9 +215,9 @@ def cmd_health(args):
 
 def cmd_index(args):
     """Handle the 'index' subcommand — analyze and persist to KuzuDB."""
-    from .graph.store import GraphStore
     from .analysis.communities import detect_communities
     from .analysis.processes import detect_processes
+    from .graph.store import GraphStore
 
     target = Path(args.path)
     if not target.exists():
@@ -442,15 +442,15 @@ def cmd_query(args):
             if json_mode:
                 _output_json(stats_data)
             else:
-                print(f"\nGraph Statistics:")
+                print("\nGraph Statistics:")
                 print(f"  Total nodes: {total}")
                 print(f"  Total edges: {edge_count}")
-                print(f"\n  Node counts by type:")
+                print("\n  Node counts by type:")
                 for table, count in table_counts.items():
                     if count > 0:
                         print(f"    {table:>12}: {count}")
                 if health_dist:
-                    print(f"\n  Health distribution (Functions + Methods):")
+                    print("\n  Health distribution (Functions + Methods):")
                     for status, count in sorted(health_dist.items()):
                         print(f"    {status:>12}: {count}")
 
@@ -735,7 +735,11 @@ def _subcommand_main():
 
 def _legacy_main():
     """Original CLI entry point — handles positional path + flag-based modes."""
-    from .renderer import render_organism, render_organism_instanced, render_playback_file, render_solar_system
+    from .renderer import (
+        render_organism,
+        render_organism_instanced,
+        render_solar_system,
+    )
 
     parser = argparse.ArgumentParser(
         description="Code Organism Visualizer - See the soul of software",
@@ -1017,7 +1021,7 @@ def run_malware_scan(target: Path, args):
 
     for filepath in files:
         try:
-            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+            with open(filepath, encoding="utf-8", errors="ignore") as f:
                 source = f.read()
 
             result = analyze_for_malware(source, str(filepath))
@@ -1079,7 +1083,7 @@ def run_complexity_analysis(target: Path, args):
 
     for filepath in files:
         try:
-            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+            with open(filepath, encoding="utf-8", errors="ignore") as f:
                 source = f.read()
 
             report = analyze_complexity(source, str(filepath))

@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
 from ..model.nodes import NodeType
 
-
 # Node types that can participate in execution flows
 _CALLABLE_TYPES = frozenset({
     NodeType.FUNCTION,

@@ -5,32 +5,29 @@ Code Organism Model
 The data structures representing a living codebase.
 """
 
-from .nodes import (
-    OrganismNode,
-    Edge,
-    FlowParticle,
-    NodeType,
-    HealthStatus,
-    Metrics,
-    Position,
-)
-
-from .organism import (
-    Organism,
-    OrganismStats,
-    ExecutionFrame,
-    ExecutionTrace,
-)
-
 from .clustering import (
-    HierarchicalClusterer,
-    ClusterNode,
     ClusterEdge,
+    ClusterNode,
+    HierarchicalClusterer,
 )
-
 from .layout import (
     LayoutEngine,
     Position3D,
+)
+from .nodes import (
+    Edge,
+    FlowParticle,
+    HealthStatus,
+    Metrics,
+    NodeType,
+    OrganismNode,
+    Position,
+)
+from .organism import (
+    ExecutionFrame,
+    ExecutionTrace,
+    Organism,
+    OrganismStats,
 )
 
 __all__ = [

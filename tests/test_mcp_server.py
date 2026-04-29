@@ -1,9 +1,7 @@
 """Tests for the Code_Organism MCP server."""
 import json
-from pathlib import Path
 
 import pytest
-
 
 # -----------------------------------------------------------------------
 # Import tests
@@ -176,7 +174,7 @@ def test_query_nonexistent_db():
 
 def test_hotspots_tool(sample_project, tmp_dir):
     """hotspots tool returns complexity data from a persisted graph."""
-    from Code_Organism.mcp_server.server import index, hotspots
+    from Code_Organism.mcp_server.server import hotspots, index
 
     db_path = str(tmp_dir / "hotspots_db")
     index(str(sample_project), db_path=db_path)
@@ -214,7 +212,7 @@ def test_unhealthy_tool(sample_project, tmp_dir):
 
 def test_impact_tool(sample_project, tmp_dir):
     """impact tool returns blast radius data."""
-    from Code_Organism.mcp_server.server import index, impact
+    from Code_Organism.mcp_server.server import impact, index
 
     db_path = str(tmp_dir / "impact_db")
     index(str(sample_project), db_path=db_path)
@@ -229,7 +227,7 @@ def test_impact_tool(sample_project, tmp_dir):
 
 def test_impact_unknown_symbol(sample_project, tmp_dir):
     """impact tool returns an error for an unknown symbol."""
-    from Code_Organism.mcp_server.server import index, impact
+    from Code_Organism.mcp_server.server import impact, index
 
     db_path = str(tmp_dir / "impact_unknown_db")
     index(str(sample_project), db_path=db_path)

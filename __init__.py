@@ -27,54 +27,48 @@ Usage:
     render_playback(session)
 """
 
+from .analysis.communities import detect_communities
+from .analysis.impact import analyze_impact
+from .analysis.processes import detect_processes
+from .graph.store import GraphStore
+from .health import (
+    ComplexityAnalyzer,
+    MalwareAnalyzer,
+    PatternDetector,
+    analyze_complexity,
+    analyze_for_malware,
+    detect_patterns,
+)
 from .model import (
-    Organism,
-    OrganismNode,
     Edge,
-    FlowParticle,
-    NodeType,
-    HealthStatus,
-    Metrics,
-    Position,
-    OrganismStats,
     ExecutionFrame,
     ExecutionTrace,
+    FlowParticle,
+    HealthStatus,
+    Metrics,
+    NodeType,
+    Organism,
+    OrganismNode,
+    OrganismStats,
+    Position,
 )
-
 from .parser import parse_file, parse_source
-
 from .renderer import (
     OrganismRenderer,
-    render_organism,
     PlaybackRenderer,
+    render_organism,
     render_playback,
     render_playback_file,
 )
-
 from .timeline import (
     ExecutionRecorder,
-    RecordingSession,
-    record_execution,
-    TimelinePlayer,
     PlaybackState,
+    RecordingSession,
     TimelineController,
+    TimelinePlayer,
+    record_execution,
 )
-
 from .tracer import Tracer, trace_execution, trace_function
-
-from .health import (
-    MalwareAnalyzer,
-    analyze_for_malware,
-    PatternDetector,
-    detect_patterns,
-    ComplexityAnalyzer,
-    analyze_complexity,
-)
-
-from .graph.store import GraphStore
-from .analysis.communities import detect_communities
-from .analysis.processes import detect_processes
-from .analysis.impact import analyze_impact
 
 __version__ = "2.0.0"
 

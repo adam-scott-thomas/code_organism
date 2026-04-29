@@ -7,16 +7,16 @@ Uses GPU instancing for O(1) draw calls per node type.
 """
 
 from __future__ import annotations
-import json
-import webbrowser
+
 import http.server
-import socketserver
-import threading
-from pathlib import Path
-from typing import Optional, Dict, Any
-import tempfile
+import json
 import os
-from urllib.parse import urlparse, parse_qs
+import socketserver
+import tempfile
+import threading
+import webbrowser
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 from ..model.organism import Organism
 
@@ -42,9 +42,9 @@ class InstancedOrganismRenderer:
         self.port = port
         self.max_level = max_level
         self.bind = bind
-        self.server: Optional[socketserver.TCPServer] = None
-        self.server_thread: Optional[threading.Thread] = None
-        self.temp_dir: Optional[str] = None
+        self.server: socketserver.TCPServer | None = None
+        self.server_thread: threading.Thread | None = None
+        self.temp_dir: str | None = None
 
     def render(self, open_browser: bool = True, use_clustering: bool = True) -> str:
         """Start the visualization server."""

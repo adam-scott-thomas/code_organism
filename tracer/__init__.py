@@ -6,9 +6,9 @@ Dynamic execution tracing for visualizing code as it runs.
 """
 
 from .instrumenter import (
-    Tracer,
     TraceContext,
     TraceEvent,
+    Tracer,
     trace_execution,
     trace_function,
 )

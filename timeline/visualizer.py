@@ -10,12 +10,11 @@ Creates the visual timeline UI that shows:
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Optional
-import json
 
-from .recorder import RecordingSession
-from .player import TimelinePlayer, PlaybackState
+import json
+from dataclasses import dataclass
+
+from .player import TimelinePlayer
 
 
 @dataclass
@@ -41,7 +40,7 @@ class TimelineVisualizer:
     and playback controls.
     """
 
-    def __init__(self, player: TimelinePlayer, config: Optional[TimelineVisualizerConfig] = None):
+    def __init__(self, player: TimelinePlayer, config: TimelineVisualizerConfig | None = None):
         self.player = player
         self.config = config or TimelineVisualizerConfig()
 

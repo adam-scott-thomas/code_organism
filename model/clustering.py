@@ -8,12 +8,13 @@ creating a hierarchical view that can be progressively loaded.
 """
 
 from __future__ import annotations
-import hashlib
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
-from collections import defaultdict
 
-from .nodes import OrganismNode as Node, NodeType, Edge
+import hashlib
+from collections import defaultdict
+from dataclasses import dataclass, field
+
+from .nodes import Edge, NodeType
+from .nodes import OrganismNode as Node
 
 
 @dataclass
@@ -30,7 +31,7 @@ class ClusterNode:
     id: str
     name: str
     level: int
-    child_ids: List[str] = field(default_factory=list)
+    child_ids: list[str] = field(default_factory=list)
     child_count: int = 0
 
     # Aggregate statistics
@@ -48,7 +49,7 @@ class ClusterNode:
 
     # Visual properties
     size: float = 1.0
-    color: Tuple[float, float, float] = (0.5, 0.5, 0.8)
+    color: tuple[float, float, float] = (0.5, 0.5, 0.8)
 
     # Position (set by layout engine)
     x: float = 0.0
@@ -104,7 +105,7 @@ class ClusterEdge:
     source_id: str
     target_id: str
     weight: float = 1.0  # Number of underlying edges
-    edge_types: Dict[str, int] = field(default_factory=dict)  # Type counts
+    edge_types: dict[str, int] = field(default_factory=dict)  # Type counts
 
     def to_dict(self) -> dict:
         return {
@@ -124,13 +125,13 @@ class HierarchicalClusterer:
     then recursively applies it to create multiple levels of abstraction.
     """
 
-    def __init__(self, nodes: Dict[str, Node], edges: Dict[str, Edge]):
+    def __init__(self, nodes: dict[str, Node], edges: dict[str, Edge]):
         self.nodes = nodes
         self.edges = edges
 
         # Build adjacency structure
-        self.adjacency: Dict[str, Set[str]] = defaultdict(set)
-        self.edge_lookup: Dict[Tuple[str, str], Edge] = {}
+        self.adjacency: dict[str, set[str]] = defaultdict(set)
+        self.edge_lookup: dict[tuple[str, str], Edge] = {}
 
         for edge in edges.values():
             self.adjacency[edge.source_id].add(edge.target_id)
@@ -139,9 +140,9 @@ class HierarchicalClusterer:
             self.edge_lookup[(edge.target_id, edge.source_id)] = edge
 
         # Clustering results
-        self.levels: List[Dict[str, ClusterNode]] = []
-        self.node_to_cluster: Dict[int, Dict[str, str]] = {}  # level -> node_id -> cluster_id
-        self.cluster_children: Dict[str, List[str]] = {}  # cluster_id -> child_ids
+        self.levels: list[dict[str, ClusterNode]] = []
+        self.node_to_cluster: dict[int, dict[str, str]] = {}  # level -> node_id -> cluster_id
+        self.cluster_children: dict[str, list[str]] = {}  # cluster_id -> child_ids
 
     def compute_hierarchy(self, target_top_level_count: int = 100, resolution: float = 1.0) -> int:
         """
@@ -214,10 +215,10 @@ class HierarchicalClusterer:
 
         return len(self.levels)
 
-    def _cluster_by_module(self) -> Dict[str, ClusterNode]:
+    def _cluster_by_module(self) -> dict[str, ClusterNode]:
         """Create initial clusters based on file/directory structure."""
         # Group nodes by their source file directory
-        module_to_nodes: Dict[str, List[str]] = defaultdict(list)
+        module_to_nodes: dict[str, list[str]] = defaultdict(list)
 
         for node_id, node in self.nodes.items():
             # Extract directory from position (file path)
@@ -228,7 +229,6 @@ class HierarchicalClusterer:
                 file_path = pos_str.split(':')[0] if ':' in pos_str else pos_str
 
                 # Get directory name (first level)
-                import os
                 parts = file_path.replace('\\', '/').split('/')
                 # Use the first directory/file as the module
                 if len(parts) >= 2:
@@ -264,10 +264,10 @@ class HierarchicalClusterer:
 
     def _louvain_partition(
         self,
-        nodes: Set[str],
-        adjacency: Dict[str, Set[str]],
+        nodes: set[str],
+        adjacency: dict[str, set[str]],
         resolution: float = 1.0
-    ) -> Dict[str, int]:
+    ) -> dict[str, int]:
         """
         Louvain community detection algorithm.
 
@@ -281,7 +281,7 @@ class HierarchicalClusterer:
         # Initialize: each node in its own community
         node_list = list(nodes)
         node_to_community = {n: i for i, n in enumerate(node_list)}
-        community_to_nodes: Dict[int, Set[str]] = {i: {n} for i, n in enumerate(node_list)}
+        community_to_nodes: dict[int, set[str]] = {i: {n} for i, n in enumerate(node_list)}
 
         # Compute initial modularity components
         m = sum(len(adj) for adj in adjacency.values()) / 2  # Total edges
@@ -344,11 +344,11 @@ class HierarchicalClusterer:
         node: str,
         from_comm: int,
         to_comm: int,
-        community_to_nodes: Dict[int, Set[str]],
-        adjacency: Dict[str, Set[str]],
-        k: Dict[str, int],
+        community_to_nodes: dict[int, set[str]],
+        adjacency: dict[str, set[str]],
+        k: dict[str, int],
         m: float,
-        nodes: Set[str],
+        nodes: set[str],
         resolution: float = 1.0
     ) -> float:
         """Calculate modularity gain from moving node between communities.
@@ -382,12 +382,12 @@ class HierarchicalClusterer:
 
     def _create_clusters_from_partition(
         self,
-        partition: Dict[str, int],
+        partition: dict[str, int],
         level: int
-    ) -> Dict[str, ClusterNode]:
+    ) -> dict[str, ClusterNode]:
         """Create ClusterNode objects from a partition."""
         # Group nodes by community
-        communities: Dict[int, List[str]] = defaultdict(list)
+        communities: dict[int, list[str]] = defaultdict(list)
         for node_id, comm_id in partition.items():
             communities[comm_id].append(node_id)
 
@@ -423,7 +423,7 @@ class HierarchicalClusterer:
     def _aggregate_stats(
         self,
         cluster: ClusterNode,
-        child_ids: List[str],
+        child_ids: list[str],
         child_level: int
     ) -> None:
         """Aggregate statistics from child nodes/clusters."""
@@ -479,10 +479,10 @@ class HierarchicalClusterer:
 
     def _build_cluster_adjacency(
         self,
-        clusters: Dict[str, ClusterNode],
-        partition: Dict[str, int],
-        old_adjacency: Dict[str, Set[str]]
-    ) -> Dict[str, Set[str]]:
+        clusters: dict[str, ClusterNode],
+        partition: dict[str, int],
+        old_adjacency: dict[str, set[str]]
+    ) -> dict[str, set[str]]:
         """Build adjacency structure between clusters based on their member connections."""
         # Map community ID to cluster ID
         comm_to_cluster = {}
@@ -495,7 +495,7 @@ class HierarchicalClusterer:
                     comm_to_cluster[comm_id] = cluster.id
 
         # Build cluster adjacency
-        cluster_adjacency: Dict[str, Set[str]] = defaultdict(set)
+        cluster_adjacency: dict[str, set[str]] = defaultdict(set)
 
         for node_id, neighbors in old_adjacency.items():
             if node_id not in partition:
@@ -517,20 +517,20 @@ class HierarchicalClusterer:
 
     def _contract_adjacency(
         self,
-        partition: Dict[str, int],
-        adjacency: Dict[str, Set[str]]
-    ) -> Dict[str, Set[str]]:
+        partition: dict[str, int],
+        adjacency: dict[str, set[str]]
+    ) -> dict[str, set[str]]:
         """Contract graph by merging nodes in same community."""
         # Map old node IDs to new cluster IDs
         comm_to_id = {}
-        for node_id, comm in partition.items():
+        for comm in partition.values():
             if comm not in comm_to_id:
                 comm_to_id[comm] = self._generate_id(f'contracted_{comm}')
 
         node_to_new = {n: comm_to_id[c] for n, c in partition.items()}
 
         # Build contracted adjacency
-        new_adjacency: Dict[str, Set[str]] = defaultdict(set)
+        new_adjacency: dict[str, set[str]] = defaultdict(set)
         for node, neighbors in adjacency.items():
             if node not in node_to_new:
                 continue
@@ -544,7 +544,7 @@ class HierarchicalClusterer:
 
         return new_adjacency
 
-    def _determine_cluster_name(self, member_ids: List[str], level: int) -> str:
+    def _determine_cluster_name(self, member_ids: list[str], level: int) -> str:
         """Determine a meaningful name for a cluster."""
         if level == 0:
             # Use most common module/package prefix
@@ -571,7 +571,7 @@ class HierarchicalClusterer:
 
         return f"Cluster-{len(member_ids)}"
 
-    def _health_to_color(self, health: str) -> Tuple[float, float, float]:
+    def _health_to_color(self, health: str) -> tuple[float, float, float]:
         """Convert health status to RGB color."""
         colors = {
             'healthy': (0.4, 0.8, 0.4),    # Green
@@ -588,26 +588,25 @@ class HierarchicalClusterer:
         data = f"{prefix}_{time.time_ns()}"
         return hashlib.md5(data.encode()).hexdigest()[:16]
 
-    def get_level(self, level: int) -> Dict[str, ClusterNode]:
+    def get_level(self, level: int) -> dict[str, ClusterNode]:
         """Get all clusters at a specific level."""
         if level < 0 or level >= len(self.levels):
             return {}
         # Levels are stored bottom-up, so reverse index
         return self.levels[-(level + 1)]
 
-    def get_top_level(self) -> Dict[str, ClusterNode]:
+    def get_top_level(self) -> dict[str, ClusterNode]:
         """Get the top-most level (fewest clusters)."""
         if not self.levels:
             return {}
         return self.levels[-1]
 
-    def get_children(self, cluster_id: str) -> List[str]:
+    def get_children(self, cluster_id: str) -> list[str]:
         """Get child IDs for a cluster."""
         return self.cluster_children.get(cluster_id, [])
 
-    def get_cluster_edges(self, clusters: Dict[str, ClusterNode]) -> List[ClusterEdge]:
+    def get_cluster_edges(self, clusters: dict[str, ClusterNode]) -> list[ClusterEdge]:
         """Get edges between clusters at a level."""
-        cluster_ids = set(clusters.keys())
         edges = []
         seen = set()
 

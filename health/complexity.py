@@ -7,11 +7,10 @@ Like measuring vital signs of the organism.
 """
 
 from __future__ import annotations
+
 import ast
 import math
 from dataclasses import dataclass, field
-from typing import Optional
-from pathlib import Path
 
 
 @dataclass
@@ -104,7 +103,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.report = ComplexityReport(file_path=filename)
 
         # Tracking state
-        self._current_metrics: Optional[ComplexityMetrics] = None
+        self._current_metrics: ComplexityMetrics | None = None
         self._nesting_depth = 0
         self._nesting_depths: list[int] = []
 
@@ -265,7 +264,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         code is for a human to understand.
         """
         complexity = 0
-        nesting = 0
 
         def walk(n: ast.AST, nesting_level: int) -> int:
             nonlocal complexity

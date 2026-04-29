@@ -8,16 +8,16 @@ moment of the organism's life.
 """
 
 from __future__ import annotations
+
+import gzip
 import json
-import time
 import threading
-from dataclasses import dataclass, field, asdict
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Any, Callable
-import gzip
 
-from ..model.organism import Organism, ExecutionFrame, ExecutionTrace
+from ..model.organism import ExecutionFrame, Organism
 from ..tracer.instrumenter import Tracer
 
 
@@ -28,7 +28,7 @@ class RecordingMetadata:
     organism_id: str
     organism_name: str
     started_at: str
-    ended_at: Optional[str] = None
+    ended_at: str | None = None
     total_frames: int = 0
     duration_ns: int = 0
     file_count: int = 0
@@ -84,7 +84,7 @@ class RecordingSession:
             with gzip.open(filepath, "rt", encoding="utf-8") as f:
                 data = json.load(f)
         else:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, encoding="utf-8") as f:
                 data = json.load(f)
 
         return cls.from_dict(data)
@@ -101,13 +101,13 @@ class ExecutionRecorder:
 
     def __init__(self, organism: Organism):
         self.organism = organism
-        self.session: Optional[RecordingSession] = None
-        self.tracer: Optional[Tracer] = None
+        self.session: RecordingSession | None = None
+        self.tracer: Tracer | None = None
         self._recording = False
         self._lock = threading.Lock()
-        self._frame_callback: Optional[Callable[[ExecutionFrame], None]] = None
+        self._frame_callback: Callable[[ExecutionFrame], None] | None = None
 
-    def start(self, session_id: Optional[str] = None) -> RecordingSession:
+    def start(self, session_id: str | None = None) -> RecordingSession:
         """Start recording execution."""
         if self._recording:
             raise RuntimeError("Already recording")
@@ -229,11 +229,11 @@ class ExecutionRecorder:
 class RecordingContext:
     """Context manager for recording execution."""
 
-    def __init__(self, organism: Organism, session_id: Optional[str] = None):
+    def __init__(self, organism: Organism, session_id: str | None = None):
         self.organism = organism
         self.session_id = session_id
-        self.recorder: Optional[ExecutionRecorder] = None
-        self.session: Optional[RecordingSession] = None
+        self.recorder: ExecutionRecorder | None = None
+        self.session: RecordingSession | None = None
 
     def __enter__(self) -> RecordingSession:
         self.recorder = ExecutionRecorder(self.organism)
@@ -245,7 +245,7 @@ class RecordingContext:
             self.recorder.stop()
 
 
-def record_execution(organism: Organism, session_id: Optional[str] = None) -> RecordingContext:
+def record_execution(organism: Organism, session_id: str | None = None) -> RecordingContext:
     """
     Context manager for recording execution.
 

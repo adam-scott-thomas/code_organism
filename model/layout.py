@@ -9,16 +9,17 @@ Layouts are cached to disk for fast subsequent loads.
 """
 
 from __future__ import annotations
+
 import hashlib
 import json
 import math
 import random
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
 
-from .nodes import OrganismNode as Node, Edge
-from .clustering import ClusterNode, ClusterEdge
+from .clustering import ClusterEdge, ClusterNode
+from .nodes import Edge
+from .nodes import OrganismNode as Node
 
 
 @dataclass
@@ -38,13 +39,13 @@ class Position3D:
 class OctreeNode:
     """Octree for Barnes-Hut force approximation."""
 
-    def __init__(self, center: Tuple[float, float, float], size: float):
+    def __init__(self, center: tuple[float, float, float], size: float):
         self.center = center
         self.size = size
-        self.children: List[Optional[OctreeNode]] = [None] * 8
-        self.node_ids: List[str] = []
+        self.children: list[OctreeNode | None] = [None] * 8
+        self.node_ids: list[str] = []
         self.total_mass: float = 0.0
-        self.center_of_mass: List[float] = [0.0, 0.0, 0.0]
+        self.center_of_mass: list[float] = [0.0, 0.0, 0.0]
         self.is_leaf: bool = True
 
     def insert(self, node_id: str, pos: Position3D, mass: float = 1.0) -> None:
@@ -59,7 +60,6 @@ class OctreeNode:
         if self.is_leaf and len(self.node_ids) == 1:
             # Convert to internal node
             self.is_leaf = False
-            old_id = self.node_ids[0]
             self.node_ids = []
             # Re-insert existing node
             # (simplified - would need position lookup)
@@ -94,7 +94,7 @@ class OctreeNode:
             octant |= 4
         return octant
 
-    def _get_child_center(self, octant: int, child_size: float) -> Tuple[float, float, float]:
+    def _get_child_center(self, octant: int, child_size: float) -> tuple[float, float, float]:
         """Get center of child octant."""
         offset = child_size / 2
         return (
@@ -119,12 +119,12 @@ class LayoutEngine:
 
     def compute_layout(
         self,
-        nodes: Dict[str, Node],
-        edges: Dict[str, Edge],
+        nodes: dict[str, Node],
+        edges: dict[str, Edge],
         use_cache: bool = True,
         iterations: int = 100,
         theta: float = 0.8,  # Barnes-Hut threshold
-    ) -> Dict[str, dict]:
+    ) -> dict[str, dict]:
         """
         Compute 3D layout for nodes.
 
@@ -148,7 +148,7 @@ class LayoutEngine:
                 pass
 
         # Build adjacency
-        adjacency: Dict[str, Set[str]] = {}
+        adjacency: dict[str, set[str]] = {}
         for node_id in nodes:
             adjacency[node_id] = set()
         for edge in edges.values():
@@ -178,10 +178,10 @@ class LayoutEngine:
 
     def compute_cluster_layout(
         self,
-        clusters: Dict[str, ClusterNode],
-        edges: List[ClusterEdge],
+        clusters: dict[str, ClusterNode],
+        edges: list[ClusterEdge],
         iterations: int = 50,
-    ) -> Dict[str, dict]:
+    ) -> dict[str, dict]:
         """
         Compute layout for cluster nodes.
 
@@ -193,7 +193,7 @@ class LayoutEngine:
             Dictionary mapping cluster_id to {x, y, z} positions
         """
         # Build adjacency from edges
-        adjacency: Dict[str, Set[str]] = {c: set() for c in clusters}
+        adjacency: dict[str, set[str]] = {c: set() for c in clusters}
         for edge in edges:
             if edge.source_id in adjacency and edge.target_id in adjacency:
                 adjacency[edge.source_id].add(edge.target_id)
@@ -218,12 +218,12 @@ class LayoutEngine:
 
     def _force_directed_3d(
         self,
-        node_ids: List[str],
-        adjacency: Dict[str, Set[str]],
+        node_ids: list[str],
+        adjacency: dict[str, set[str]],
         iterations: int = 100,
         theta: float = 0.8,
         verbose: bool = False,
-    ) -> Dict[str, Position3D]:
+    ) -> dict[str, Position3D]:
         """
         Barnes-Hut force-directed layout in 3D.
 
@@ -237,7 +237,7 @@ class LayoutEngine:
             print(f"Computing layout for {n} nodes...")
 
         # Initialize positions randomly in a sphere
-        positions: Dict[str, Position3D] = {}
+        positions: dict[str, Position3D] = {}
         spread = math.sqrt(n) * 2  # Scale with sqrt of node count
 
         for node_id in node_ids:
@@ -270,9 +270,6 @@ class LayoutEngine:
                     min_coord = min(min_coord, c)
                     max_coord = max(max_coord, c)
 
-            tree_size = max(max_coord - min_coord, 1.0) * 1.5
-            tree_center = ((max_coord + min_coord) / 2,) * 3
-
             # Simplified: use direct O(n²) for small graphs
             # Full Barnes-Hut for large graphs
             if n < 5000:
@@ -302,7 +299,7 @@ class LayoutEngine:
 
     def _apply_direct_repulsion(
         self,
-        positions: Dict[str, Position3D],
+        positions: dict[str, Position3D],
         repulsion: float,
         min_dist: float
     ) -> None:
@@ -336,7 +333,7 @@ class LayoutEngine:
 
     def _apply_barnes_hut_repulsion(
         self,
-        positions: Dict[str, Position3D],
+        positions: dict[str, Position3D],
         repulsion: float,
         theta: float,
         min_dist: float
@@ -357,7 +354,7 @@ class LayoutEngine:
             grid_size = 1
 
         # Hash nodes to grid cells
-        grid: Dict[Tuple[int, int, int], List[str]] = {}
+        grid: dict[tuple[int, int, int], list[str]] = {}
         for node_id in node_ids:
             pos = positions[node_id]
             cell = (
@@ -409,8 +406,8 @@ class LayoutEngine:
 
     def _apply_edge_attraction(
         self,
-        positions: Dict[str, Position3D],
-        adjacency: Dict[str, Set[str]],
+        positions: dict[str, Position3D],
+        adjacency: dict[str, set[str]],
         attraction: float
     ) -> None:
         """Apply attraction forces along edges."""
@@ -441,10 +438,10 @@ class LayoutEngine:
 
     def _spring_layout_3d(
         self,
-        node_ids: List[str],
-        adjacency: Dict[str, Set[str]],
+        node_ids: list[str],
+        adjacency: dict[str, set[str]],
         iterations: int = 50,
-    ) -> Dict[str, Position3D]:
+    ) -> dict[str, Position3D]:
         """Simpler spring layout for small graphs."""
         return self._force_directed_3d(
             node_ids,
@@ -456,7 +453,7 @@ class LayoutEngine:
 
     def _normalize_positions(
         self,
-        positions: Dict[str, Position3D],
+        positions: dict[str, Position3D],
         target_range: float = 100
     ) -> None:
         """Normalize positions to fit in a cube."""
@@ -494,8 +491,8 @@ class LayoutEngine:
 
     def _compute_cache_key(
         self,
-        nodes: Dict[str, Node],
-        edges: Dict[str, Edge]
+        nodes: dict[str, Node],
+        edges: dict[str, Edge]
     ) -> str:
         """Compute cache key from graph structure."""
         # Hash based on node IDs and edge connections

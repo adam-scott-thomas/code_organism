@@ -15,16 +15,16 @@ Only renders ~50-200 objects at any time for smooth performance.
 """
 
 from __future__ import annotations
-import json
-import webbrowser
+
 import http.server
-import socketserver
-import threading
-from pathlib import Path
-from typing import Optional, Dict, Any, List
-import tempfile
+import json
 import os
-from urllib.parse import urlparse, parse_qs
+import socketserver
+import tempfile
+import threading
+import webbrowser
+from pathlib import Path
+from urllib.parse import urlparse
 
 from ..model.organism import Organism
 
@@ -41,9 +41,9 @@ class SolarSystemRenderer:
         self.organism = organism
         self.port = port
         self.bind = bind
-        self.server: Optional[socketserver.TCPServer] = None
-        self.server_thread: Optional[threading.Thread] = None
-        self.temp_dir: Optional[str] = None
+        self.server: socketserver.TCPServer | None = None
+        self.server_thread: threading.Thread | None = None
+        self.temp_dir: str | None = None
 
         # Pre-compute hierarchy
         self._hierarchy = None
@@ -131,7 +131,7 @@ class SolarSystemRenderer:
             self._directory_tree[file_key]['nodes'].append(node_id)
 
         # Convert sets to lists for JSON serialization
-        for path, info in self._directory_tree.items():
+        for info in self._directory_tree.values():
             info['children'] = list(info['children'])
             info['files'] = list(info['files'])
 
@@ -150,7 +150,7 @@ class SolarSystemRenderer:
             for dp in dir_paths[1:]:
                 other_parts = dp.split('/')
                 common_len = 0
-                for a, b in zip(prefix_parts, other_parts):
+                for a, b in zip(prefix_parts, other_parts, strict=False):
                     if a == b:
                         common_len += 1
                     else:
@@ -258,7 +258,6 @@ class SolarSystemRenderer:
             def _get_universe(self) -> dict:
                 """Get top-level view - your project directories."""
                 import math
-                import random
 
                 nodes = []
                 # Use roots as galaxies
@@ -295,7 +294,6 @@ class SolarSystemRenderer:
             def _get_children(self, parent_id: str) -> dict:
                 """Get children of a directory."""
                 import math
-                import random
 
                 # Find the path for this ID
                 if parent_id not in id_to_path:
@@ -368,7 +366,6 @@ class SolarSystemRenderer:
 
             def _get_code_nodes(self, node_ids: list, file_name: str) -> dict:
                 """Get actual code nodes (classes, functions, etc.)."""
-                import math
 
                 nodes_dict = {nid: org.nodes[nid] for nid in node_ids if nid in org.nodes}
 
@@ -449,7 +446,6 @@ class SolarSystemRenderer:
 
             def _calculate_health(self, path: str) -> str:
                 """Calculate dominant health for a path."""
-                info = directory_tree.get(path, {})
                 health_counts = {'healthy': 0, 'stressed': 0, 'inflamed': 0, 'necrotic': 0, 'cancerous': 0}
 
                 def count_health(p):

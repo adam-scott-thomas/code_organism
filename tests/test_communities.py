@@ -3,18 +3,15 @@
 import sys
 from pathlib import Path
 
-import pytest
-
 # Ensure the package is importable
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from Code_Organism.model.organism import Organism
-from Code_Organism.model.nodes import OrganismNode, Edge, NodeType
 from Code_Organism.analysis.communities import (
-    detect_communities,
-    _merge_small_communities,
     _MIN_COMMUNITY_SIZE,
+    detect_communities,
 )
+from Code_Organism.model.nodes import Edge, NodeType, OrganismNode
+from Code_Organism.model.organism import Organism
 
 
 class TestDetectCommunities:

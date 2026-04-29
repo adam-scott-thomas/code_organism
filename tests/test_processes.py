@@ -7,9 +7,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from Code_Organism.model.organism import Organism
-from Code_Organism.model.nodes import OrganismNode, Edge, NodeType, Position
 from Code_Organism.analysis.processes import detect_processes
+from Code_Organism.model.organism import Organism
 
 
 @pytest.fixture

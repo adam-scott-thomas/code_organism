@@ -1,5 +1,4 @@
 """Shared test fixtures for Code_Organism tests."""
-from pathlib import Path
 
 import pytest
 

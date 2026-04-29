@@ -12,19 +12,18 @@ Generic/TypeVar, protocol/ABC detection, and rich type annotations.
 """
 
 from __future__ import annotations
+
 import ast
-from pathlib import Path
-from typing import Optional
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from ..model.nodes import (
-    OrganismNode,
     Edge,
-    NodeType,
-    Position,
     Metrics,
+    NodeType,
+    OrganismNode,
+    Position,
 )
-
 
 # ---------------------------------------------------------------------------
 # Walk context
@@ -35,9 +34,9 @@ class WalkContext:
     """Context maintained while walking the AST."""
     filename: str
     module_name: str
-    current_class: Optional[str] = None
-    current_function: Optional[str] = None
-    parent_id: Optional[str] = None
+    current_class: str | None = None
+    current_function: str | None = None
+    parent_id: str | None = None
     depth: int = 0
     scope_stack: list[str] = field(default_factory=list)
 
@@ -58,7 +57,7 @@ class WalkContext:
         self.scope_stack.append(name)
         self.depth += 1
 
-    def pop_scope(self) -> Optional[str]:
+    def pop_scope(self) -> str | None:
         self.depth -= 1
         return self.scope_stack.pop() if self.scope_stack else None
 
@@ -96,7 +95,7 @@ class CodeAnatomist(ast.NodeVisitor):
 
         self._defined_names: dict[str, str] = {}   # name -> node_id
         self._imports: dict[str, str] = {}          # alias -> full_name
-        self._current_node_id: Optional[str] = None
+        self._current_node_id: str | None = None
 
         # v2: track type-checking-only imports
         self._in_type_checking: bool = False
@@ -112,7 +111,7 @@ class CodeAnatomist(ast.NodeVisitor):
         self.nodes.append(node)
         self._id_to_node[node.id] = node
 
-    def _find_node(self, node_id: Optional[str]) -> Optional[OrganismNode]:
+    def _find_node(self, node_id: str | None) -> OrganismNode | None:
         if node_id is None:
             return None
         return self._id_to_node.get(node_id)
@@ -161,7 +160,7 @@ class CodeAnatomist(ast.NodeVisitor):
                     self._record_module_constant(stmt.target.id, stmt, type_ann)
 
     def _record_module_constant(
-        self, name: str, node: ast.AST, type_ann: Optional[str] = None,
+        self, name: str, node: ast.AST, type_ann: str | None = None,
     ) -> None:
         qualified_name = f"{self.context.module_name}.{name}"
         const_node = OrganismNode(
@@ -633,7 +632,7 @@ class CodeAnatomist(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _record_variable(
-        self, name: str, node: ast.AST, type_ann: Optional[str] = None,
+        self, name: str, node: ast.AST, type_ann: str | None = None,
     ) -> None:
         # Only class attributes (not local vars — too noisy)
         if self.context.current_class and not self.context.current_function:
@@ -662,7 +661,7 @@ class CodeAnatomist(ast.NodeVisitor):
     # HELPERS
     # =================================================================
 
-    def _get_name(self, node: Optional[ast.AST]) -> str:
+    def _get_name(self, node: ast.AST | None) -> str:
         """Extract a name from various AST node types.
 
         v2: handles more node kinds for richer type annotations.
@@ -779,7 +778,7 @@ class CodeAnatomist(ast.NodeVisitor):
 
 def parse_file(filepath: Path) -> tuple[list[OrganismNode], list[Edge]]:
     """Parse a Python file and extract its anatomical structure."""
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, encoding="utf-8") as f:
         source = f.read()
     return parse_source(source, str(filepath))
 

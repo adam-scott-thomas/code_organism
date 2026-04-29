@@ -7,9 +7,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from Code_Organism.model.organism import Organism
-from Code_Organism.model.nodes import OrganismNode, Edge, NodeType, Position
 from Code_Organism.analysis.impact import analyze_impact
+from Code_Organism.model.nodes import Edge, NodeType, OrganismNode, Position
+from Code_Organism.model.organism import Organism
 
 
 class TestAnalyzeImpact:

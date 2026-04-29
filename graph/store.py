@@ -124,7 +124,7 @@ class GraphStore:
         rows: list[dict] = []
         while result.has_next():
             values = result.get_next()
-            rows.append(dict(zip(columns, values)))
+            rows.append(dict(zip(columns, values, strict=False)))
         return rows
 
     # ------------------------------------------------------------------

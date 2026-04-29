@@ -13,11 +13,9 @@ regardless of source language.
 
 from __future__ import annotations
 
-import hashlib
 import importlib
 import logging
 from pathlib import Path
-from typing import Optional
 
 import tree_sitter
 
@@ -115,7 +113,7 @@ def _get_language_obj(lang_key: str, package_name: str) -> tree_sitter.Language:
 
 # ── Helper: extract name from a tree-sitter node ────────────────────
 
-def _child_by_type(node: tree_sitter.Node, *types: str) -> Optional[tree_sitter.Node]:
+def _child_by_type(node: tree_sitter.Node, *types: str) -> tree_sitter.Node | None:
     """Return the first child whose ``type`` is in *types*."""
     for child in node.children:
         if child.type in types:
@@ -218,7 +216,7 @@ class TreeSitterParser:
 
         try:
             source = Path(filepath).read_bytes()
-        except (OSError, IOError) as exc:
+        except OSError as exc:
             logger.warning("Cannot read %s: %s", filepath, exc)
             return [], []
 
@@ -418,7 +416,7 @@ class TreeSitterParser:
         def _resolve_call_target(
             call_node: tree_sitter.Node,
             callee_name: str,
-        ) -> Optional[str]:
+        ) -> str | None:
             """Try to resolve a callee name to a defined node ID.
 
             Resolution order:
@@ -632,7 +630,7 @@ class TreeSitterParser:
 
 # ── Module-level convenience ─────────────────────────────────────────
 
-_default_parser: Optional[TreeSitterParser] = None
+_default_parser: TreeSitterParser | None = None
 
 
 def get_parser() -> TreeSitterParser:

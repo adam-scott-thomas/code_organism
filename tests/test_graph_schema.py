@@ -1,11 +1,9 @@
 """Tests for graph.schema — KuzuDB schema creation."""
-import tempfile
-from pathlib import Path
 
 import kuzu
 import pytest
 
-from Code_Organism.graph.schema import create_schema, NODE_TABLES
+from Code_Organism.graph.schema import NODE_TABLES, create_schema
 
 
 @pytest.fixture

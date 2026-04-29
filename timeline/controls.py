@@ -8,11 +8,12 @@ UI buttons, or API endpoints.
 """
 
 from __future__ import annotations
+
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Callable, Any
 
-from .player import TimelinePlayer, PlaybackState
+from .player import PlaybackState, TimelinePlayer
 
 
 class ControlCommand(Enum):
@@ -116,7 +117,7 @@ class TimelineController:
             for key, cmd in self._bindings.items()
         ]
 
-    def _get_handler(self, command: ControlCommand) -> Optional[Callable]:
+    def _get_handler(self, command: ControlCommand) -> Callable | None:
         """Get the handler function for a command."""
         handlers = {
             ControlCommand.PLAY: self.player.play,

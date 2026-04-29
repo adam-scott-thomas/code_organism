@@ -31,10 +31,8 @@ import ast
 import json
 import sys
 import textwrap
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
-
 
 # ═══════════════════════════════════════════════════════════════════════
 # DATA MODEL
@@ -50,10 +48,10 @@ class StepCall:
     outputs: list[str]                   # LHS targets (empty if expression-stmt)
     args: list[str]                      # Positional arg expressions
     kwargs: dict[str, str]               # Keyword arg expressions
-    inside_loop: Optional[str] = None    # Loop variable if inside for-loop
-    inside_if: Optional[str] = None      # Condition expression if inside if-block
-    comment: Optional[str] = None        # Inline comment / docstring hint
-    step_label: Optional[str] = None     # e.g. "Step 3" from comments
+    inside_loop: str | None = None    # Loop variable if inside for-loop
+    inside_if: str | None = None      # Condition expression if inside if-block
+    comment: str | None = None        # Inline comment / docstring hint
+    step_label: str | None = None     # e.g. "Step 3" from comments
 
 
 @dataclass
@@ -129,7 +127,7 @@ def extract_targets(node: ast.AST) -> list[str]:
     return []
 
 
-def extract_step_label(source_lines: list[str], lineno: int) -> Optional[str]:
+def extract_step_label(source_lines: list[str], lineno: int) -> str | None:
     """
     Look for a comment above `lineno` that looks like a step label.
     e.g.  # --- Step 3: Update S(t) ---
@@ -171,8 +169,8 @@ class FunctionExtractor(ast.NodeVisitor):
         self._order = 0
         self._loop_stack: list[str] = []       # Full nesting chain
         self._if_stack: list[str] = []          # Full nesting chain
-        self._current_branch: Optional[Branch] = None
-        self._current_loop: Optional[Loop] = None
+        self._current_branch: Branch | None = None
+        self._current_loop: Loop | None = None
 
     def extract(self, func_node: ast.FunctionDef) -> ExtractionResult:
         """Main entry: walk the function body and return structured result."""
@@ -411,7 +409,7 @@ class FunctionExtractor(ast.NodeVisitor):
 # FIND THE TARGET FUNCTION
 # ═══════════════════════════════════════════════════════════════════════
 
-def find_function(tree: ast.Module, name: str) -> Optional[ast.FunctionDef]:
+def find_function(tree: ast.Module, name: str) -> ast.FunctionDef | None:
     """Find a function or method by name in the AST (searches classes too)."""
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -480,14 +478,13 @@ def build_dependency_graph(steps: list[StepCall]) -> dict:
 def generate_mermaid(result: ExtractionResult, dep_graph: dict) -> str:
     """Generate a Mermaid flowchart from the extraction result."""
     lines = [
-        f"%%{{ init: {{'theme': 'base', 'themeVariables': {{'primaryColor': '#E8F4FD', 'primaryTextColor': '#2D3436', 'primaryBorderColor': '#0984E3', 'lineColor': '#636E72', 'secondaryColor': '#F0FAF0', 'tertiaryColor': '#FFF5F5'}}}} }}%%",
-        f"flowchart TD",
+        "%%{ init: {'theme': 'base', 'themeVariables': {'primaryColor': '#E8F4FD', 'primaryTextColor': '#2D3436', 'primaryBorderColor': '#0984E3', 'lineColor': '#636E72', 'secondaryColor': '#F0FAF0', 'tertiaryColor': '#FFF5F5'}} }%%",
+        "flowchart TD",
         f"    %% Auto-generated from {result.function_name}() in {Path(result.source_file).name}",
         f"    %% Lines {result.function_line}-{result.function_end_line} | {result.total_steps} steps",
         "",
     ]
 
-    nodes = dep_graph["nodes"]
     edges = dep_graph["edges"]
 
     # Track which steps are inside loops/conditions for subgraphs
@@ -521,32 +518,32 @@ def generate_mermaid(result: ExtractionResult, dep_graph: dict) -> str:
         short_desc = loop_desc
         if len(short_desc) > 60:
             short_desc = short_desc[:57] + "..."
-        lines.append(f"")
+        lines.append("")
         lines.append(f"    subgraph loop{i}[\"LOOP: {_escape_mermaid(short_desc)}\"]")
-        lines.append(f"        direction TB")
+        lines.append("        direction TB")
         for step in result.steps:
             nid = f"s{step.order}"
             if nid in node_ids:
                 label = _mermaid_label(step)
                 label = label.replace("|", "\\|")
                 lines.append(f"        {nid}[{_quote(label)}]")
-        lines.append(f"    end")
+        lines.append("    end")
 
     # Emit conditional subgraphs
     for i, (cond, node_ids) in enumerate(if_steps.items()):
         short_cond = cond
         if len(short_cond) > 60:
             short_cond = short_cond[:57] + "..."
-        lines.append(f"")
+        lines.append("")
         lines.append(f"    subgraph if{i}[\"IF: {_escape_mermaid(short_cond)}\"]")
-        lines.append(f"        direction TB")
+        lines.append("        direction TB")
         for step in result.steps:
             nid = f"s{step.order}"
             if nid in node_ids:
                 label = _mermaid_label(step)
                 label = label.replace("|", "\\|")
                 lines.append(f"        {nid}[{_quote(label)}]")
-        lines.append(f"    end")
+        lines.append("    end")
 
     # Emit edges
     lines.append("")
@@ -607,14 +604,13 @@ def generate_graphviz(result: ExtractionResult, dep_graph: dict) -> str:
         f'digraph "{result.function_name}" {{',
         f'    // Auto-generated from {result.function_name}() in {Path(result.source_file).name}',
         f'    // Lines {result.function_line}-{result.function_end_line} | {result.total_steps} steps',
-        f'',
-        f'    rankdir=TB;',
-        f'    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10];',
-        f'    edge [fontname="Helvetica", fontsize=8, color="#636E72"];',
-        f'',
+        '',
+        '    rankdir=TB;',
+        '    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10];',
+        '    edge [fontname="Helvetica", fontsize=8, color="#636E72"];',
+        '',
     ]
 
-    nodes = dep_graph["nodes"]
     edges = dep_graph["edges"]
 
     # Collect loop/if membership
@@ -648,42 +644,42 @@ def generate_graphviz(result: ExtractionResult, dep_graph: dict) -> str:
     # Emit loop subgraphs
     for i, (loop_desc, nids) in enumerate(loop_groups.items()):
         short = loop_desc if len(loop_desc) <= 50 else loop_desc[:47] + "..."
-        lines.append(f'')
+        lines.append('')
         lines.append(f'    subgraph cluster_loop{i} {{')
         lines.append(f'        label="LOOP: {_dot_escape(short)}";')
-        lines.append(f'        style=dashed;')
-        lines.append(f'        color="#E17055";')
-        lines.append(f'        fontcolor="#E17055";')
+        lines.append('        style=dashed;')
+        lines.append('        color="#E17055";')
+        lines.append('        fontcolor="#E17055";')
         for step in result.steps:
             nid = f"s{step.order}"
             if nid in nids:
                 label = _dot_label(step)
                 lines.append(f'        {nid} [label="{label}", fillcolor="#FFF3E0"];')
-        lines.append(f'    }}')
+        lines.append('    }')
 
     # Emit if subgraphs
     for i, (cond, nids) in enumerate(if_groups.items()):
         short = cond if len(cond) <= 50 else cond[:47] + "..."
-        lines.append(f'')
+        lines.append('')
         lines.append(f'    subgraph cluster_if{i} {{')
         lines.append(f'        label="IF: {_dot_escape(short)}";')
-        lines.append(f'        style=dashed;')
-        lines.append(f'        color="#D63031";')
-        lines.append(f'        fontcolor="#D63031";')
+        lines.append('        style=dashed;')
+        lines.append('        color="#D63031";')
+        lines.append('        fontcolor="#D63031";')
         for step in result.steps:
             nid = f"s{step.order}"
             if nid in nids:
                 label = _dot_label(step)
                 lines.append(f'        {nid} [label="{label}", fillcolor="#FFF5F5"];')
-        lines.append(f'    }}')
+        lines.append('    }')
 
     # Emit edges
-    lines.append(f'')
+    lines.append('')
     for source, targets in edges.items():
         for target in targets:
             lines.append(f'    {source} -> {target};')
 
-    lines.append(f'}}')
+    lines.append('}')
     return "\n".join(lines)
 
 
@@ -793,9 +789,9 @@ def extract(filepath: str | Path, function_name: str = "_execute_cycle",
             for b in result.branches
         ],
         "loops": [
-            {"line": l.line, "target": l.target, "iterable": l.iterable,
-             "call_count": len(l.calls)}
-            for l in result.loops
+            {"line": loop.line, "target": loop.target, "iterable": loop.iterable,
+             "call_count": len(loop.calls)}
+            for loop in result.loops
         ],
     }
     steps_path.write_text(json.dumps(steps_data, indent=2), encoding="utf-8")

@@ -8,17 +8,18 @@ through the organism in real time.
 """
 
 from __future__ import annotations
+
 import sys
-import time
 import threading
+import time
+import traceback
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Optional, Any, Callable
 from pathlib import Path
-import traceback
+from typing import Any
 
-from ..model.organism import Organism, ExecutionFrame, ExecutionTrace
-from ..model.nodes import OrganismNode, NodeType
+from ..model.organism import ExecutionFrame, ExecutionTrace, Organism
 
 
 @dataclass
@@ -32,7 +33,7 @@ class TraceEvent:
     function_name: str
     locals: dict = field(default_factory=dict)
     return_value: Any = None
-    exception: Optional[Exception] = None
+    exception: Exception | None = None
 
 
 class Tracer:
@@ -46,7 +47,7 @@ class Tracer:
 
     def __init__(self, organism: Organism):
         self.organism = organism
-        self.trace: Optional[ExecutionTrace] = None
+        self.trace: ExecutionTrace | None = None
         self._start_time_ns: int = 0
         self._call_stack: list[str] = []
         self._frame_index: int = 0
@@ -59,7 +60,7 @@ class Tracer:
             if node.position:
                 self._trace_files.add(node.position.file)
 
-    def start(self, trace_id: Optional[str] = None) -> ExecutionTrace:
+    def start(self, trace_id: str | None = None) -> ExecutionTrace:
         """Start tracing execution."""
         self.trace = self.organism.start_trace(trace_id)
         self._start_time_ns = time.perf_counter_ns()
@@ -73,7 +74,7 @@ class Tracer:
 
         return self.trace
 
-    def stop(self) -> Optional[ExecutionTrace]:
+    def stop(self) -> ExecutionTrace | None:
         """Stop tracing and return the trace."""
         self._active = False
         sys.settrace(None)
@@ -81,7 +82,7 @@ class Tracer:
 
         return self.organism.stop_trace()
 
-    def _trace_function(self, frame, event: str, arg) -> Optional[Callable]:
+    def _trace_function(self, frame, event: str, arg) -> Callable | None:
         """
         The trace function called by Python for each event.
 
@@ -241,7 +242,7 @@ class Tracer:
 
         return ".".join(parts)
 
-    def _find_node_id(self, qualified_name: str, filename: str, lineno: int) -> Optional[str]:
+    def _find_node_id(self, qualified_name: str, filename: str, lineno: int) -> str | None:
         """Find the node ID for a given code location."""
         # Try by qualified name first
         for node in self.organism.nodes.values():
@@ -270,11 +271,11 @@ class Tracer:
 class TraceContext:
     """Context manager for tracing code execution."""
 
-    def __init__(self, organism: Organism, trace_id: Optional[str] = None):
+    def __init__(self, organism: Organism, trace_id: str | None = None):
         self.organism = organism
         self.trace_id = trace_id
-        self.tracer: Optional[Tracer] = None
-        self.trace: Optional[ExecutionTrace] = None
+        self.tracer: Tracer | None = None
+        self.trace: ExecutionTrace | None = None
 
     def __enter__(self) -> ExecutionTrace:
         self.tracer = Tracer(self.organism)
@@ -286,7 +287,7 @@ class TraceContext:
             self.tracer.stop()
 
 
-def trace_execution(organism: Organism, trace_id: Optional[str] = None) -> TraceContext:
+def trace_execution(organism: Organism, trace_id: str | None = None) -> TraceContext:
     """
     Context manager for tracing code execution.
 

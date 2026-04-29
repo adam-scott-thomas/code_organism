@@ -5,23 +5,21 @@ Code Organism Health Diagnostics
 Analyze code health and detect problematic patterns.
 """
 
-from .patterns import (
-    PatternDetector,
-    Pattern,
-    PatternSeverity,
-    detect_patterns,
-)
-
-from .malware import (
-    MalwareMarker,
-    MalwareAnalyzer,
-    MalwareSeverity,
-    analyze_for_malware,
-)
-
 from .complexity import (
     ComplexityAnalyzer,
     analyze_complexity,
+)
+from .malware import (
+    MalwareAnalyzer,
+    MalwareMarker,
+    MalwareSeverity,
+    analyze_for_malware,
+)
+from .patterns import (
+    Pattern,
+    PatternDetector,
+    PatternSeverity,
+    detect_patterns,
 )
 
 __all__ = [

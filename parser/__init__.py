@@ -9,9 +9,10 @@ Extracts anatomical structure from source code.
 - The ``dispatcher`` module selects the right backend automatically.
 """
 
-from .ast_walker import parse_file as parse_python_file, parse_source, CodeAnatomist, WalkContext
-from .tree_sitter_parser import TreeSitterParser, LANGUAGE_MAP
+from .ast_walker import CodeAnatomist, WalkContext, parse_source
+from .ast_walker import parse_file as parse_python_file
 from .dispatcher import parse_file
+from .tree_sitter_parser import LANGUAGE_MAP, TreeSitterParser
 
 __all__ = [
     # Dispatcher (preferred entry point)

@@ -11,16 +11,17 @@ every detail.
 """
 
 from __future__ import annotations
-import time
+
 import threading
+import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional, Callable, Any
 from pathlib import Path
 
+from ..model.organism import Organism
 from .recorder import RecordingSession
-from ..model.organism import Organism, ExecutionFrame
 
 
 class PlaybackState(Enum):
@@ -46,7 +47,7 @@ class PlaybackPosition:
     frame_index: int
     elapsed_ns: int
     progress: float  # 0.0 to 1.0
-    timestamp: Optional[str] = None
+    timestamp: str | None = None
 
 
 class TimelinePlayer:
@@ -70,19 +71,19 @@ class TimelinePlayer:
         self._loop = False
 
         # Threading
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._pause_event = threading.Event()
         self._pause_event.set()  # Not paused initially
 
         # Callbacks
-        self._on_frame: Optional[Callable[[dict, PlaybackPosition], None]] = None
-        self._on_state_change: Optional[Callable[[PlaybackState], None]] = None
-        self._on_event: Optional[Callable[[PlaybackEvent], None]] = None
+        self._on_frame: Callable[[dict, PlaybackPosition], None] | None = None
+        self._on_state_change: Callable[[PlaybackState], None] | None = None
+        self._on_event: Callable[[PlaybackEvent], None] | None = None
 
         # Reconstructed organism (for state at each frame)
-        self._organism: Optional[Organism] = None
+        self._organism: Organism | None = None
 
     @classmethod
     def from_file(cls, filepath: Path) -> TimelinePlayer:
@@ -131,7 +132,6 @@ class TimelinePlayer:
 
         frame = self.session.frames[self._current_frame] if self._current_frame < len(self.session.frames) else None
         elapsed_ns = frame.get("elapsed_ns", 0) if frame else 0
-        total_ns = self.session.metadata.duration_ns or 1
 
         return PlaybackPosition(
             frame_index=self._current_frame,
@@ -292,13 +292,13 @@ class TimelinePlayer:
     # FRAME ACCESS
     # =========================================================================
 
-    def get_frame(self, index: int) -> Optional[dict]:
+    def get_frame(self, index: int) -> dict | None:
         """Get frame data by index."""
         if 0 <= index < self.total_frames:
             return self.session.frames[index]
         return None
 
-    def get_current_frame_data(self) -> Optional[dict]:
+    def get_current_frame_data(self) -> dict | None:
         """Get current frame data."""
         return self.get_frame(self._current_frame)
 

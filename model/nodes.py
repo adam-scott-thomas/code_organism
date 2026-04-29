@@ -7,11 +7,11 @@ These are the cells, tissues, and organs of the code organism.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Optional, Any
-from datetime import datetime, timezone
+
 import hashlib
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum
 
 
 class NodeType(Enum):
@@ -58,8 +58,8 @@ class Position:
     file: str
     line: int
     column: int
-    end_line: Optional[int] = None
-    end_column: Optional[int] = None
+    end_line: int | None = None
+    end_column: int | None = None
 
     def __str__(self) -> str:
         return f"{self.file}:{self.line}:{self.column}"
@@ -158,10 +158,10 @@ class OrganismNode:
     qualified_name: str                  # Full dotted path (e.g., "module.Class.method")
 
     # Location
-    position: Optional[Position] = None  # Where in source code
+    position: Position | None = None  # Where in source code
 
     # Relationships (populated during graph building)
-    parent_id: Optional[str] = None      # Containing structure
+    parent_id: str | None = None      # Containing structure
     children_ids: list[str] = field(default_factory=list)  # Contained structures
 
     # Connections (populated during graph building)
@@ -173,13 +173,13 @@ class OrganismNode:
     referenced_by: list[str] = field(default_factory=list)  # What references this
 
     # Content
-    source_code: Optional[str] = None    # The actual source (optional)
-    docstring: Optional[str] = None      # Documentation
-    signature: Optional[str] = None      # For functions: the signature
+    source_code: str | None = None    # The actual source (optional)
+    docstring: str | None = None      # Documentation
+    signature: str | None = None      # For functions: the signature
 
     # Type information
-    type_annotation: Optional[str] = None  # Type hint if present
-    return_type: Optional[str] = None    # For functions: return type
+    type_annotation: str | None = None  # Type hint if present
+    return_type: str | None = None    # For functions: return type
 
     # Metrics and health
     metrics: Metrics = field(default_factory=Metrics)
@@ -187,14 +187,14 @@ class OrganismNode:
     health_notes: list[str] = field(default_factory=list)
 
     # Visualization properties
-    color: Optional[tuple[float, float, float]] = None  # RGB 0-1
+    color: tuple[float, float, float] | None = None  # RGB 0-1
     size: float = 1.0                    # Relative size
     glow: float = 0.0                    # 0-1, for highlighting activity
     pulse_rate: float = 0.0              # For animation, Hz
 
     # Metadata
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    analyzed_at: Optional[datetime] = None
+    analyzed_at: datetime | None = None
 
     def __post_init__(self):
         """Set default visualization properties based on type."""
@@ -328,11 +328,11 @@ class Edge:
 
     # Dynamic properties (from tracing)
     flow_count: int = 0                  # Times data flowed through
-    last_flow_time: Optional[datetime] = None
+    last_flow_time: datetime | None = None
     avg_data_size: int = 0               # Average bytes transferred
 
     # Visualization
-    color: Optional[tuple[float, float, float]] = None
+    color: tuple[float, float, float] | None = None
     thickness: float = 1.0
     animated: bool = False               # Show flow animation
     flow_speed: float = 1.0              # Animation speed multiplier
@@ -376,8 +376,8 @@ class FlowParticle:
     speed: float = 1.0                   # Units per second
 
     # What it's carrying
-    data_type: Optional[str] = None      # Type of data being transferred
-    data_preview: Optional[str] = None   # String preview of data
+    data_type: str | None = None      # Type of data being transferred
+    data_preview: str | None = None   # String preview of data
     data_size: int = 0                   # Bytes
 
     # Visualization

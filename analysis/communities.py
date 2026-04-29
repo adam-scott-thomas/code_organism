@@ -376,7 +376,7 @@ def _common_path_label(nodes: list) -> str | None:
         common = list(path_parts_list[0])
         for parts in path_parts_list[1:]:
             new_common = []
-            for a, b in zip(common, parts):
+            for a, b in zip(common, parts, strict=False):
                 if a == b:
                     new_common.append(a)
                 else:

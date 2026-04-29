@@ -15,7 +15,6 @@ from Code_Organism.graph.store import GraphStore
 from Code_Organism.model.nodes import Edge, HealthStatus, Metrics, NodeType, OrganismNode, Position
 from Code_Organism.model.organism import Organism
 
-
 PKG_ROOT = Path(__file__).resolve().parent.parent
 WORKSPACE = PKG_ROOT.parent
 

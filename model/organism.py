@@ -7,19 +7,20 @@ Contains all nodes, edges, and the machinery to trace its heartbeat.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Optional, Iterator, Callable, Any
-from pathlib import Path
-from datetime import datetime, timezone
+
 import json
+from collections.abc import Iterator
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
 
 from .nodes import (
-    OrganismNode,
     Edge,
     FlowParticle,
-    NodeType,
     HealthStatus,
     Metrics,
+    NodeType,
+    OrganismNode,
     Position,
 )
 
@@ -92,7 +93,7 @@ class ExecutionTrace:
 
     trace_id: str
     started_at: datetime
-    ended_at: Optional[datetime] = None
+    ended_at: datetime | None = None
 
     # Frames
     frames: list[ExecutionFrame] = field(default_factory=list)
@@ -121,7 +122,7 @@ class ExecutionTrace:
         if frame.memory_bytes > self.peak_memory:
             self.peak_memory = frame.memory_bytes
 
-    def get_frame(self, index: int) -> Optional[ExecutionFrame]:
+    def get_frame(self, index: int) -> ExecutionFrame | None:
         """Get a specific frame."""
         if 0 <= index < len(self.frames):
             return self.frames[index]
@@ -138,14 +139,14 @@ class ExecutionTrace:
         self.current_frame = int(position * (len(self.frames) - 1))
         return self.current_frame
 
-    def step_forward(self) -> Optional[ExecutionFrame]:
+    def step_forward(self) -> ExecutionFrame | None:
         """Move one frame forward."""
         if self.current_frame < len(self.frames) - 1:
             self.current_frame += 1
             return self.frames[self.current_frame]
         return None
 
-    def step_backward(self) -> Optional[ExecutionFrame]:
+    def step_backward(self) -> ExecutionFrame | None:
         """Move one frame backward."""
         if self.current_frame > 0:
             self.current_frame -= 1
@@ -179,11 +180,11 @@ class Organism:
 
         # Dynamic state
         self.particles: list[FlowParticle] = []
-        self.active_trace: Optional[ExecutionTrace] = None
+        self.active_trace: ExecutionTrace | None = None
         self.traces: list[ExecutionTrace] = []
 
         # Computed stats
-        self._stats: Optional[OrganismStats] = None
+        self._stats: OrganismStats | None = None
         self._stats_dirty = True
 
     # =========================================================================
@@ -191,7 +192,7 @@ class Organism:
     # =========================================================================
 
     @classmethod
-    def from_file(cls, filepath: str | Path) -> "Organism":
+    def from_file(cls, filepath: str | Path) -> Organism:
         """Create an organism from a single Python file."""
         from ..parser.ast_walker import parse_file
 
@@ -216,7 +217,7 @@ class Organism:
         return organism
 
     @classmethod
-    def from_directory(cls, dirpath: str | Path, pattern: str = "**/*.py") -> "Organism":
+    def from_directory(cls, dirpath: str | Path, pattern: str = "**/*.py") -> Organism:
         """Create an organism from a directory of source files.
 
         Uses the parser dispatcher so that both Python and tree-sitter
@@ -268,7 +269,7 @@ class Organism:
         return organism
 
     @classmethod
-    def from_source(cls, source: str, filename: str = "<string>") -> "Organism":
+    def from_source(cls, source: str, filename: str = "<string>") -> Organism:
         """Create an organism from source code string."""
         from ..parser.ast_walker import parse_source
 
@@ -308,7 +309,7 @@ class Organism:
 
         self._stats_dirty = True
 
-    def get_node(self, node_id: str) -> Optional[OrganismNode]:
+    def get_node(self, node_id: str) -> OrganismNode | None:
         """Get a node by ID."""
         return self.nodes.get(node_id)
 
@@ -351,7 +352,7 @@ class Organism:
 
         self._stats_dirty = True
 
-    def get_edge(self, edge_id: str) -> Optional[Edge]:
+    def get_edge(self, edge_id: str) -> Edge | None:
         """Get an edge by ID."""
         return self.edges.get(edge_id)
 
@@ -485,7 +486,7 @@ class Organism:
     # TRACING
     # =========================================================================
 
-    def start_trace(self, trace_id: Optional[str] = None) -> ExecutionTrace:
+    def start_trace(self, trace_id: str | None = None) -> ExecutionTrace:
         """Start a new execution trace."""
         import uuid
 
@@ -497,7 +498,7 @@ class Organism:
         self.traces.append(trace)
         return trace
 
-    def stop_trace(self) -> Optional[ExecutionTrace]:
+    def stop_trace(self) -> ExecutionTrace | None:
         """Stop the current trace."""
         if self.active_trace:
             self.active_trace.ended_at = datetime.now(timezone.utc)
@@ -855,7 +856,7 @@ class Organism:
             f.write(self.to_json())
 
     @classmethod
-    def load(cls, filepath: str | Path) -> "Organism":
+    def load(cls, filepath: str | Path) -> Organism:
         """Load organism from a JSON file."""
         with open(filepath) as f:
             data = json.load(f)
@@ -863,7 +864,7 @@ class Organism:
         organism = cls(name=data.get("name", "loaded"))
 
         # Deserialize nodes
-        for nid, nd in data.get("nodes", {}).items():
+        for nd in data.get("nodes", {}).values():
             pos = None
             if nd.get("position"):
                 pos = Position(
@@ -899,7 +900,7 @@ class Organism:
             organism.add_node(node)
 
         # Deserialize edges
-        for eid, ed in data.get("edges", {}).items():
+        for ed in data.get("edges", {}).values():
             edge = Edge(
                 id=ed["id"],
                 source_id=ed["source_id"],

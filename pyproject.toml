@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "ruff>=0.6.0"]
 
 [project.scripts]
 code-organism = "Code_Organism.cli:main"
@@ -31,3 +31,25 @@ code-organism = "Code_Organism.cli:main"
 [tool.setuptools.packages.find]
 where = [".."]
 include = ["Code_Organism*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["examples/demo_target.py"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line-length handled by formatter; long lines mostly in HTML/JS literals
+    "B008",  # function calls in argument defaults — used intentionally for dataclass factories
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]  # tests sometimes import after sys.path edits

@@ -9,12 +9,11 @@ in the organism.
 """
 
 from __future__ import annotations
+
 import ast
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
-from pathlib import Path
 
 
 class PatternSeverity(Enum):
@@ -273,7 +272,7 @@ class PatternDetector(ast.NodeVisitor):
     def visit_Compare(self, node: ast.Compare) -> None:
         """Check comparison patterns."""
         # Check for `== True` or `== False`
-        for op, comparator in zip(node.ops, node.comparators):
+        for op, comparator in zip(node.ops, node.comparators, strict=False):
             if isinstance(op, ast.Eq):
                 if isinstance(comparator, ast.Constant):
                     if comparator.value is True:

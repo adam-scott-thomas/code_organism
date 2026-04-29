@@ -7,12 +7,12 @@ Code Organism Renderer
 
 from .graph_3d import OrganismRenderer, render_organism
 from .graph_3d_instanced import InstancedOrganismRenderer, render_organism_instanced
-from .solar_system import SolarSystemRenderer, render_solar_system
 from .playback_renderer import (
     PlaybackRenderer,
     render_playback,
     render_playback_file,
 )
+from .solar_system import SolarSystemRenderer, render_solar_system
 
 __all__ = [
     # Static rendering

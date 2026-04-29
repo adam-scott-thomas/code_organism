@@ -3,7 +3,7 @@
 import pytest
 
 from Code_Organism.model.nodes import Edge, NodeType, OrganismNode
-from Code_Organism.parser.tree_sitter_parser import TreeSitterParser, LANGUAGE_MAP
+from Code_Organism.parser.tree_sitter_parser import TreeSitterParser
 
 
 @pytest.fixture

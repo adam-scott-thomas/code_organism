@@ -7,15 +7,15 @@ Uses a web-based approach with Three.js for cross-platform compatibility.
 """
 
 from __future__ import annotations
-import json
-import webbrowser
+
 import http.server
-import socketserver
-import threading
-from pathlib import Path
-from typing import Optional
-import tempfile
+import json
 import os
+import socketserver
+import tempfile
+import threading
+import webbrowser
+from pathlib import Path
 
 from ..model.organism import Organism
 
@@ -32,8 +32,8 @@ class OrganismRenderer:
         self.organism = organism
         self.port = port
         self.bind = bind
-        self.server: Optional[socketserver.TCPServer] = None
-        self.server_thread: Optional[threading.Thread] = None
+        self.server: socketserver.TCPServer | None = None
+        self.server_thread: threading.Thread | None = None
 
     def render(self, open_browser: bool = True) -> str:
         """

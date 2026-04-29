@@ -9,10 +9,8 @@ Run via: python -m Code_Organism.mcp_server
 from __future__ import annotations
 
 import json
-import sys
 import traceback
 from pathlib import Path
-from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
@@ -34,7 +32,7 @@ mcp = FastMCP(
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _resolve_pattern(path: str, pattern: Optional[str]) -> str:
+def _resolve_pattern(path: str, pattern: str | None) -> str:
     """Determine the glob pattern for a path.
 
     If *pattern* is explicitly provided, use it. Otherwise auto-detect
@@ -65,7 +63,7 @@ def _resolve_pattern(path: str, pattern: Optional[str]) -> str:
     return "**/*.py"
 
 
-def _build_organism(path: str, pattern: Optional[str] = None):
+def _build_organism(path: str, pattern: str | None = None):
     """Build an Organism from a file or directory path."""
     from Code_Organism.model import Organism
 
@@ -198,9 +196,9 @@ def health(path: str) -> str:
 def index(path: str, db_path: str = "") -> str:
     """Parse and persist to KuzuDB."""
     try:
-        from Code_Organism.graph.store import GraphStore
         from Code_Organism.analysis.communities import detect_communities
         from Code_Organism.analysis.processes import detect_processes
+        from Code_Organism.graph.store import GraphStore
 
         target = Path(path)
         organism = _build_organism(path)

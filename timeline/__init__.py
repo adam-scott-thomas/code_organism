@@ -5,28 +5,25 @@ Code Organism Timeline & Playback
 Controls for recording, replaying, and navigating execution traces.
 """
 
-from .recorder import (
-    ExecutionRecorder,
-    RecordingSession,
-    RecordingMetadata,
-    RecordingContext,
-    record_execution,
-)
-
-from .player import (
-    TimelinePlayer,
-    PlaybackState,
-    PlaybackEvent,
-    PlaybackPosition,
-)
-
 from .controls import (
-    TimelineController,
-    ControlCommand,
     ControlBinding,
+    ControlCommand,
+    TimelineController,
     create_controller,
 )
-
+from .player import (
+    PlaybackEvent,
+    PlaybackPosition,
+    PlaybackState,
+    TimelinePlayer,
+)
+from .recorder import (
+    ExecutionRecorder,
+    RecordingContext,
+    RecordingMetadata,
+    RecordingSession,
+    record_execution,
+)
 from .visualizer import (
     TimelineVisualizer,
     TimelineVisualizerConfig,

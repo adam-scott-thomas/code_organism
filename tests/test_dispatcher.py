@@ -1,6 +1,5 @@
 """Tests for the parser dispatcher (routing files to the correct backend)."""
 
-import pytest
 
 from Code_Organism.model.nodes import Edge, NodeType, OrganismNode
 from Code_Organism.parser.dispatcher import parse_file, resolve_cross_file_calls

@@ -19,7 +19,8 @@ from pathlib import Path
 
 from ..model.nodes import Edge, NodeType, OrganismNode
 from .ast_walker import parse_file as _parse_python
-from .tree_sitter_parser import LANGUAGE_MAP, get_parser as _get_ts_parser
+from .tree_sitter_parser import LANGUAGE_MAP
+from .tree_sitter_parser import get_parser as _get_ts_parser
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,6 @@ def resolve_cross_file_calls(
         candidates = name_to_real.get(builtin_node.name, [])
         if len(candidates) == 1:
             # Unambiguous resolution -- retarget the edge
-            old_target = edge.target_id
             new_target = candidates[0]
             edge.target_id = new_target
             # Recompute the edge ID to stay consistent
