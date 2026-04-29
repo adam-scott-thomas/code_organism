@@ -13,7 +13,7 @@ from __future__ import annotations
 import time
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional, Callable, Any
 from pathlib import Path
@@ -388,7 +388,7 @@ class TimelinePlayer:
         if self._on_event:
             event = PlaybackEvent(
                 event_type=event_type,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 data=data,
             )
             self._on_event(event)

@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional, Iterator, Callable, Any
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 from .nodes import (
@@ -162,7 +162,7 @@ class Organism:
 
     def __init__(self, name: str = "unnamed"):
         self.name = name
-        self.created_at = datetime.utcnow()
+        self.created_at = datetime.now(timezone.utc)
 
         # The anatomy
         self.nodes: dict[str, OrganismNode] = {}
@@ -486,12 +486,11 @@ class Organism:
 
     def start_trace(self, trace_id: Optional[str] = None) -> ExecutionTrace:
         """Start a new execution trace."""
-        from datetime import datetime
         import uuid
 
         trace = ExecutionTrace(
             trace_id=trace_id or str(uuid.uuid4())[:8],
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
         )
         self.active_trace = trace
         self.traces.append(trace)
@@ -500,7 +499,7 @@ class Organism:
     def stop_trace(self) -> Optional[ExecutionTrace]:
         """Stop the current trace."""
         if self.active_trace:
-            self.active_trace.ended_at = datetime.utcnow()
+            self.active_trace.ended_at = datetime.now(timezone.utc)
             if self.active_trace.frames:
                 self.active_trace.total_runtime_ns = \
                     self.active_trace.frames[-1].elapsed_ns

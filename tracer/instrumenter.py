@@ -11,7 +11,7 @@ import sys
 import time
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Any, Callable
 from pathlib import Path
 import traceback
@@ -129,7 +129,7 @@ class Tracer:
                     local_vars[name] = self._safe_repr(value)
 
             exec_frame = ExecutionFrame(
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 frame_index=self._frame_index,
                 node_id=node_id or "",
                 event_type="call",
@@ -161,7 +161,7 @@ class Tracer:
                 self._call_stack.pop()
 
             exec_frame = ExecutionFrame(
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 frame_index=self._frame_index,
                 node_id=node_id or "",
                 event_type="return",
@@ -195,7 +195,7 @@ class Tracer:
 
         with self._lock:
             exec_frame = ExecutionFrame(
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 frame_index=self._frame_index,
                 node_id=node_id or "",
                 event_type="exception",

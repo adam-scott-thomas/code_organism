@@ -11,7 +11,7 @@ import json
 import time
 import threading
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Any, Callable
 import gzip
@@ -113,14 +113,14 @@ class ExecutionRecorder:
 
         # Generate session ID if not provided
         if session_id is None:
-            session_id = f"rec_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+            session_id = f"rec_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
 
         # Create metadata
         metadata = RecordingMetadata(
             session_id=session_id,
             organism_id=self.organism.id,
             organism_name=self.organism.name,
-            started_at=datetime.utcnow().isoformat(),
+            started_at=datetime.now(timezone.utc).isoformat(),
             file_count=len(set(n.position.file for n in self.organism.nodes.values() if n.position)),
             node_count=len(self.organism.nodes),
             edge_count=len(self.organism.edges),
@@ -168,7 +168,7 @@ class ExecutionRecorder:
 
         # Finalize metadata
         if self.session:
-            self.session.metadata.ended_at = datetime.utcnow().isoformat()
+            self.session.metadata.ended_at = datetime.now(timezone.utc).isoformat()
             self.session.metadata.total_frames = len(self.session.frames)
 
             # Calculate timing stats

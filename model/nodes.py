@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 
 
@@ -192,7 +192,7 @@ class OrganismNode:
     pulse_rate: float = 0.0              # For animation, Hz
 
     # Metadata
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     analyzed_at: Optional[datetime] = None
 
     def __post_init__(self):
@@ -290,7 +290,7 @@ class OrganismNode:
             self.health = HealthStatus.CANCEROUS
             self.health_notes.append(f"Critical complexity (score: {score:.2f})")
 
-        self.analyzed_at = datetime.utcnow()
+        self.analyzed_at = datetime.now(timezone.utc)
 
     def set_activity(self, level: float) -> None:
         """
@@ -385,7 +385,7 @@ class FlowParticle:
     trail_length: float = 0.1            # How long the trail behind particle
 
     # Lifecycle
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     lifetime_seconds: float = 5.0        # How long before particle dies
 
     def update(self, dt: float) -> bool:
@@ -401,7 +401,7 @@ class FlowParticle:
         self.position += self.speed * dt
 
         # Check if reached destination or expired
-        age = (datetime.utcnow() - self.created_at).total_seconds()
+        age = (datetime.now(timezone.utc) - self.created_at).total_seconds()
 
         if self.position >= 1.0 or age > self.lifetime_seconds:
             return False
